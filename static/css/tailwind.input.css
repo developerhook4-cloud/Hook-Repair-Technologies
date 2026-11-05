@@ -1,0 +1,186 @@
+/*
+  Fuente de estilos de Hook Repair (Tailwind CSS v4).
+
+  ⚠️ Este archivo NO lo carga el navegador. Se compila a static/css/app.css,
+  que es el que usan las páginas. Si agregas o cambias clases de Tailwind en
+  templates/ o static/js/, vuelve a generar app.css con:
+
+    npx @tailwindcss/cli@4 -i static/css/tailwind.input.css -o static/css/app.css --minify
+
+  Colores, tipografías y utilidades propias de Hook.
+*/
+
+@import 'tailwindcss';
+
+@source "../../templates";
+@source "../js";
+
+@font-face {
+  font-family: 'Inter';
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/Inter-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/Inter-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/Inter-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Mulish';
+  font-weight: 400;
+  font-display: swap;
+  src: url('/static/fonts/Mulish-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Mulish';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/static/fonts/Mulish-SemiBold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Mulish';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/static/fonts/Mulish-Bold.woff2') format('woff2');
+}
+
+@theme {
+  --color-brand-primary: #f1314c;
+  --color-brand-lighter: #fb6257;
+  --color-brand-darker: #9b1732;
+  --color-brand-subtle: #eecdcc;
+
+  --color-error-primary: #d92b49;
+  --color-error-lighter: #f36a73;
+  --color-error-darker: #952534;
+  --color-error-subtle: #e4c7c6;
+
+  --color-warning-primary: #efca38;
+  --color-warning-lighter: #eed26f;
+  --color-warning-darker: #dca115;
+  --color-warning-subtle: #f5deb7;
+
+  --color-success-primary: #00b43e;
+  --color-success-lighter: #6cd88a;
+  --color-success-darker: #008b33;
+  --color-success-subtle: #c4efcd;
+
+  --color-info-primary: #0086f0;
+  --color-info-lighter: #61a2ec;
+  --color-info-darker: #005cbc;
+  --color-info-subtle: #a0c5e3;
+
+  --color-dark-1: #3a3a3c;
+  --color-dark-2: #6b7588;
+  --color-dark-3: #8f90a6;
+  --color-dark-4: #c7c9d9;
+
+  --color-light-1: #dde5e9;
+  --color-light-2: #ebebf0;
+  --color-light-3: #f2f2f5;
+  --color-light-4: #fafafc;
+
+  --font-heading: 'Inter', sans-serif;
+  --font-label: 'Mulish', sans-serif;
+
+  --shadow-card: 0px 4px 4px 0px rgba(0, 0, 0, 0.25);
+  --shadow-small: 0px 2px 2px 0px rgba(0, 0, 0, 0.25);
+  --shadow-inset-top: inset 0px 4px 4px -4px rgba(0, 0, 0, 0.25);
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: scale(0.97);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+}
+
+@utility heading-1 {
+  @apply text-dark-1 font-heading text-5xl font-bold tracking-tight;
+}
+
+@utility heading-2 {
+  @apply text-dark-1 font-heading text-3xl md:text-4xl font-bold tracking-tight;
+}
+
+@utility heading-3 {
+  @apply text-dark-1 font-heading text-3xl font-bold;
+}
+
+@utility heading-4 {
+  @apply text-dark-1 font-heading text-2xl font-bold;
+}
+
+@utility heading-5 {
+  @apply text-dark-1 font-heading text-xl font-bold;
+}
+
+@utility heading-6 {
+  @apply text-dark-1 font-heading text-lg font-bold;
+}
+
+@utility body-small {
+  @apply font-label text-sm font-normal;
+}
+
+@utility body-normal {
+  @apply font-label text-base font-normal;
+}
+
+@utility body-large {
+  @apply font-label text-xl font-semibold;
+}
+
+@utility label-small {
+  @apply font-label text-xs font-semibold;
+}
+
+@utility label-normal {
+  @apply font-label text-sm md:text-base font-semibold;
+}
+
+@utility label-large {
+  @apply font-label text-base font-semibold;
+}
+
+/* Ajustes base */
+@layer base {
+  body {
+    @apply font-label text-dark-1 bg-light-4;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+  [hidden] {
+    display: none !important;
+  }
+  /* Quita las flechitas de los <input type="number"> en el "Ir a pág." */
+  input.no-spin::-webkit-outer-spin-button,
+  input.no-spin::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input.no-spin {
+    -moz-appearance: textfield;
+  }
+}

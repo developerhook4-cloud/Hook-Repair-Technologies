@@ -1,0 +1,42 @@
+{{define "settings-profile"}}{{template "layout-start" .}}
+<div class="flex-1 flex-col flex min-h-0 bg-white rounded-2xl p-6 md:p-10 shadow-sm overflow-y-auto">
+  <form id="profileForm" class="flex flex-col gap-6 w-full max-w-5xl mx-auto relative h-full" novalidate>
+    <div class="flex flex-col gap-8 md:gap-12">
+      <section class="flex-1">
+        <h2 class="heading-5 font-bold text-dark-1 mb-6">Configurar perfil</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          {{template "input" dict "Label" "Nombre" "Name" "name" "Placeholder" "Nombre" "Required" true}}
+          {{template "input" dict "Label" "Email" "Name" "email" "Type" "email" "Placeholder" "ejemplo@ejemplo.com" "Required" true}}
+        </div>
+      </section>
+
+      <section class="flex-1">
+        <div id="passwordToggle" role="button" tabindex="0"
+             class="flex label-normal items-center justify-between min-w-60 cursor-pointer py-1.5 px-2.5 rounded-md align-middle transition-all duration-300 ease-in text-dark-1 bg-light-3 p-2 hover:bg-light-1 focus:bg-light-1">
+          Cambiar contraseña
+          <span class="grid place-items-center shrink-0 transition-transform duration-300" data-chevron>
+            <i class="fa-solid fa-chevron-down"></i>
+          </span>
+        </div>
+        <div id="passwordPanel" class="overflow-hidden transition-[max-height,opacity] duration-300 ease-in-out max-h-0 opacity-0">
+          <div class="pb-6">
+            {{template "input" dict "Label" "Contraseña anterior" "Name" "oldPassword" "Password" true "Placeholder" "Ingrese su contraseña" "Autocomplete" "current-password"}}
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {{template "input" dict "Label" "Nueva contraseña" "Name" "newPassword" "Password" true "Placeholder" "Ingrese la nueva contraseña" "Autocomplete" "new-password"}}
+            {{template "input" dict "Label" "Repetir nueva contraseña" "Name" "repeatNewPassword" "Password" true "Placeholder" "Ingrese la nueva contraseña" "Autocomplete" "new-password"}}
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="flex justify-center mt-auto pt-8 pb-8">
+      <div class="w-48">
+        <button id="profileSubmit" type="submit" class="w-full label-large py-3.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-small px-4 bg-brand-primary hover:bg-brand-darker text-light-4 rounded-full">
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{{template "layout-end" .}}{{end}}

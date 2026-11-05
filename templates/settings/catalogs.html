@@ -1,0 +1,25 @@
+{{/* Configuración → Inventario: Categorías, Marcas y Modelos. */}}
+
+{{define "settings-categories"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Categorías de reparaciones" "Placeholder" "Buscar categoría..." "Button" "Agregar nueva categoría" "Rounded" "rounded-lg"}}
+  <div id="list" class="w-full border border-gray-100 rounded-[20px] bg-white flex flex-col mb-6 overflow-hidden shadow-sm"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "settings-brands"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Marcas de dispositivos" "Placeholder" "Buscar marca..." "Button" "Agregar nueva marca" "Rounded" "rounded-lg"}}
+  <div id="list" class="w-full border border-gray-100 rounded-[20px] bg-white flex flex-col mb-6 overflow-hidden shadow-sm"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "settings-models"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Modelos de dispositivos" "Placeholder" "Buscar modelo o marca..." "Button" "Agregar nuevo dispositivo" "SearchWidth" "sm:w-[320px]"}}
+  <div id="list" class="w-full border border-gray-100 rounded-[20px] bg-white flex flex-col mb-6 overflow-hidden shadow-sm"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}

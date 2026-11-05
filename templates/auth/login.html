@@ -1,0 +1,63 @@
+{{define "login"}}{{template "head" .}}
+<body>
+<div class="h-screen w-full bg-light-4 flex overflow-hidden">
+  <div class="w-full lg:w-1/2 flex flex-col justify-between p-6 md:px-12 md:py-8 h-full">
+    <div>
+      <img src="/static/img/LOGO_RN.svg" alt="Hook Technologies" class="h-12" />
+    </div>
+
+    <div class="w-full max-w-90 mx-auto flex flex-col justify-center">
+      <div class="text-center mb-6">
+        <h1 class="heading-3 text-dark-1 mb-1">Login</h1>
+        <p class="body-normal text-dark-2 text-sm">Por favor introduzca sus credenciales para iniciar sesión.</p>
+      </div>
+
+      <form id="loginForm" class="w-full flex flex-col gap-4" novalidate>
+        <div class="flex flex-col gap-2 w-full">
+          <label for="email" class="label-normal text-dark-1">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" placeholder="Introduzca su email" required
+                 class="w-full bg-white border border-light-2 rounded-lg p-3 body-normal text-dark-1 outline-none focus:border-brand-primary transition-colors placeholder:text-dark-4" />
+          <small data-error-for="email" class="label-small text-error-primary" hidden></small>
+        </div>
+
+        <div class="flex flex-col gap-2 w-full">
+          <label for="password" class="label-normal text-dark-1">Contraseña</label>
+          <div class="relative w-full">
+            <input id="password" name="password" type="password" autocomplete="current-password" placeholder="*****************" required
+                   class="w-full bg-white border border-light-2 rounded-lg p-3 body-normal text-dark-1 outline-none focus:border-brand-primary transition-colors placeholder:text-dark-4 pr-12 tracking-widest" />
+            <button type="button" data-toggle-password aria-label="Mostrar contraseña"
+                    class="absolute right-4 top-1/2 -translate-y-1/2 text-dark-3 hover:text-dark-1 transition-colors flex items-center justify-center">
+              <i class="fa-solid fa-eye-slash text-lg"></i>
+            </button>
+          </div>
+          <small data-error-for="password" class="label-small text-error-primary" hidden></small>
+        </div>
+
+        <p id="loginError" class="label-normal text-error-primary text-center" hidden></p>
+
+        <div class="w-full mt-2">
+          <button id="loginSubmit" type="submit" disabled
+                  class="w-full label-large py-3.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-small px-4 bg-dark-1 hover:bg-dark-1 text-light-4">
+            Iniciar sesión
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <p class="body-normal text-dark-2 text-sm">© 2026 Hook Technologies</p>
+    </div>
+  </div>
+
+  <div class="hidden lg:flex lg:w-1/2 p-4 md:p-6 h-full">
+    <div class="w-full h-full rounded-2xl overflow-hidden bg-dark-1 relative shadow-card flex items-center justify-center">
+      <img src="/static/img/LOGO_BB.svg" alt="Hook Technologies" class="w-1/2 max-w-80 opacity-90" />
+    </div>
+  </div>
+</div>
+<script src="/static/js/core/api.js"></script>
+<script src="/static/js/core/ui.js"></script>
+<script src="/static/js/auth/login.js"></script>
+</body>
+</html>
+{{end}}

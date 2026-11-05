@@ -1,0 +1,27 @@
+# Variables de entorno / credenciales — NUNCA subir a git
+.env
+.env.local
+.env.*.local
+
+# Binarios compilados de Go
+/main
+/hook-repair
+*.exe
+*.test
+*.out
+
+# Dependencias de Node (solo se usan para regenerar static/css/app.css)
+node_modules/
+
+# Editor / sistema
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*.log
+
+*.pem
+*.key
+
+

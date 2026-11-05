@@ -1,0 +1,63 @@
+# Hook Repair (Go + HTML/CSS/JS)
+
+Proyecto en Go con la misma estructura que Website-Avante: Gin + `html/template`,
+MySQL, sesión en cookie firmada y JS sin frameworks.
+
+## Correr en local
+
+```bash
+cp .env.example .env      # llena MYSQL_PUBLIC_URL y pon COOKIE_SECURE=false
+go run .
+# http://localhost:8080  →  admin@hookrepair.com / SEED_ADMIN_PASSWORD
+```
+
+Al arrancar, `db.EnsureSchema()` crea las tablas que falten (`CREATE TABLE IF NOT
+EXISTS`), así que en una base vacía deja todo listo y en una con datos no toca
+nada. El esquema completo está en `db/schema.sql`; también lo puedes pegar en la
+pestaña **Query** de MySQL en Railway.
+
+## Railway
+
+- Variables del servicio: `MYSQL_URL=${{MySQL.MYSQL_URL}}`, `SESSION_SECRET`,
+  `COOKIE_SECURE=true` y, la primera vez, `SEED_ADMIN_PASSWORD`.
+- Railway detecta `go.mod` y compila solo. `PORT` lo pone Railway.
+
+## Estructura
+
+```
+main.go                 rutas (páginas + API)
+auth/                   sesión (gorilla/sessions)
+db/                     conexión a MySQL y esquema (schema.sql)
+models/                 consultas SQL por módulo (auth, catálogos, CRM, inventario)
+handlers/               páginas, API y middlewares (permisos, organización)
+templates/<sección>/    HTML (partials, auth, settings, inventory, organizations…)
+static/js/<sección>/    JS de cada página; static/js/core/ = API, UI y layout
+static/css/app.css      CSS compilado (Tailwind) — no se edita a mano
+```
+
+## Base de datos
+
+Tablas: `organizations`, `roles`, `users`, `categories`, `brands`,
+`device_models`, `repair_services`, `customers`, `suppliers`, `products`,
+`product_models`, `product_serials`, `inventory_movements`, `purchase_orders`,
+`purchase_order_lines`, `goods_receipts`, `goods_receipt_lines`.
+
+Los IDs son `BIGINT AUTO_INCREMENT`. El UPC de cada producto se arma al crearlo:
+`4` + `1` si lleva IMEI / `0` si no + el id con 10 dígitos (ej. `400000000001`).
+
+## Estilos
+
+`static/css/app.css` ya viene compilado; si agregas clases nuevas de Tailwind en
+`templates/` o `static/js/`, regenéralo:
+
+```bash
+npm i -D @tailwindcss/cli@4 tailwindcss@4
+npx @tailwindcss/cli -i static/css/tailwind.input.css -o static/css/app.css --minify
+```
+
+## API
+
+Todo bajo `/api`: `/api/auth/*`, `/api/organizations…` y, por organización,
+`/api/{orgId}/roles|users|categories|brands|models|services|clients|suppliers|products|inventory/movements|purchase-orders|goods-receipts`.
+Permisos con formato `Módulo.Acción` (`Inventory.View`, `Customers.Update`, …).
+El login deja una cookie de sesión HttpOnly (`hook_session`).

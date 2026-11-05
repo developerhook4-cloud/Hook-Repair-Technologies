@@ -1,0 +1,51 @@
+{{/* Inventario: Productos, Movimientos y Órdenes de compra. */}}
+
+{{define "inventory-toolbar"}}
+<h2 class="heading-5 mb-8 text-dark-1">{{.Title}}</h2>
+<div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6">
+  <div class="relative w-full lg:w-95">
+    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+    <input id="search" type="text" placeholder="{{.Placeholder}}" autocomplete="off"
+           class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:border-brand-primary body-normal text-dark-1 placeholder-gray-400 shadow-sm" />
+  </div>
+  <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+    {{if .Filters}}
+    <button id="filterBtn" type="button" class="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-[14px] text-dark-2 body-normal font-semibold flex items-center gap-2 hover:bg-gray-100 transition-colors whitespace-nowrap">
+      <i class="fa-solid fa-sliders text-xs"></i> Filtros <span id="filterCount" class="bg-brand-primary text-white text-xs rounded-full px-2 py-0.5" hidden></span>
+    </button>
+    {{end}}
+    <button id="exportBtn" type="button" class="px-5 py-2.5 bg-gray-50 border border-gray-200 rounded-[14px] text-dark-2 body-normal font-semibold flex items-center gap-2 hover:bg-gray-100 transition-colors whitespace-nowrap">
+      {{.Export}} <i class="fa-solid fa-file-csv text-xs"></i>
+    </button>
+    {{if .Button}}
+    <button id="addBtn" type="button" class="bg-brand-primary text-white px-6 py-2.5 rounded-[14px] label-normal font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap">
+      <i class="fa-solid fa-plus text-xs"></i> {{.Button}}
+    </button>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
+{{define "inventory-products"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "inventory-toolbar" dict "Title" "Gestionar productos" "Placeholder" "Buscar por ID, nombre, UPC..." "Filters" true "Export" "Exportar" "Button" (and (.Can "Inventory.Update") "Crear producto")}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "inventory-movements"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "inventory-toolbar" dict "Title" "Movimientos de inventario" "Placeholder" "Buscar por producto, tipo, motivo..." "Export" "Exportar" "Button" (and (.Can "Inventory.Update") "Nuevo movimiento")}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "inventory-purchase-orders"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "inventory-toolbar" dict "Title" "Órdenes de compra" "Placeholder" "Buscar por número, proveedor, usuario..." "Export" "Exportar" "Button" (and (.Can "Inventory.Update") "Crear orden de compra")}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}

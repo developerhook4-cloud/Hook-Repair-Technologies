@@ -1,0 +1,31 @@
+{{/* Secciones que todavía no existen ("Próximamente"). */}}
+
+{{define "coming-soon-card"}}
+<section class="bg-white rounded-2xl shadow-card p-10 max-w-lg w-full text-center">
+  <i class="fa-solid fa-hourglass-half text-5xl text-brand-primary"></i>
+  <h1 class="mt-4 text-2xl font-bold text-dark-1">{{.Heading}}</h1>
+  <span class="inline-block mt-3 bg-info-subtle text-info-darker text-xs font-semibold px-3 py-1 rounded-full">Próximamente</span>
+  <p class="mt-4 text-dark-3">Estamos trabajando en esta sección. Pronto estará disponible.</p>
+  <a href="/inventory" class="inline-block mt-6 px-5 py-2 rounded-xl bg-brand-primary text-light-4 font-semibold hover:opacity-90">Ir a Inventario</a>
+</section>
+{{end}}
+
+{{define "coming-soon"}}{{template "app-start" .}}
+<div class="min-h-screen bg-light-4 p-4 md:p-6 pt-20 md:pt-24 flex">
+  <main class="flex-1 flex items-center justify-center">
+    {{template "coming-soon-card" .}}
+  </main>
+</div>
+{{template "app-end" .}}{{end}}
+
+{{define "coming-soon-settings"}}{{template "layout-start" .}}
+<div class="flex-1 min-h-0 flex items-center justify-center bg-white rounded-2xl p-6 md:p-10 shadow-sm">
+  {{template "coming-soon-card" .}}
+</div>
+{{template "layout-end" .}}{{end}}
+
+{{define "coming-soon-inventory"}}{{template "layout-start" .}}
+<div class="flex-1 min-h-0 flex items-center justify-center bg-white rounded-2xl p-6 md:p-10 shadow-sm">
+  {{template "coming-soon-card" .}}
+</div>
+{{template "layout-end" .}}{{end}}

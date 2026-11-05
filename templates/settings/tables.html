@@ -1,0 +1,33 @@
+{{/* Configuración: páginas con tabla (Servicios, Clientes, Proveedores, Empleados). */}}
+
+{{define "settings-services"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Servicios de reparación" "Placeholder" "Buscar por nombre, modelo, marca, categoría..." "Button" "Crear servicio" "SearchWidth" "sm:w-95"}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "settings-clients"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Gestionar clientes" "Placeholder" "Buscar por ID, nombre, tipo..." "Button" "Nuevo cliente" "SearchWidth" "sm:w-95"}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "settings-suppliers"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Gestionar Proveedores" "Placeholder" "Buscar por ID, nombre, email..." "Button" "Nuevo proveedor" "SearchWidth" "sm:w-95"}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}
+
+{{define "settings-users"}}{{template "layout-start" .}}
+{{template "settings-card-start" .}}
+  {{template "list-toolbar" dict "Title" "Gestionar usuarios" "Placeholder" "Buscar por nombre o email" "Button" "Crear usuario" "SearchWidth" "sm:w-95"}}
+  <div id="table"></div>
+  <div id="pager"></div>
+{{template "settings-card-end" .}}
+{{template "layout-end" .}}{{end}}

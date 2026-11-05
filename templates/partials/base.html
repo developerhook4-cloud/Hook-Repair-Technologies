@@ -1,0 +1,57 @@
+{{/* ─────────────────────────────────────────────────────────────────
+   Piezas comunes de todas las páginas:
+   - "head"      <head> con estilos, íconos y la sesión para el JS
+   - "scripts"   JS común + el JS propio de la página (.Script)
+   - "app-start" / "app-end"  página con navbar (sin menú lateral)
+   - "layout-start" / "layout-end"  página con navbar + menú lateral
+     (Configuración o Inventario, según .Sidebar)
+   ───────────────────────────────────────────────────────────────── */}}
+
+{{define "head"}}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>{{.Title}} · Hook Repair</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+  <link rel="preload" href="/static/fonts/Inter-Bold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/Mulish-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <script type="application/json" id="hook-session">{{.SessionJSON}}</script>
+</head>
+{{end}}
+
+{{define "scripts"}}
+  <script src="/static/js/core/api.js"></script>
+  <script src="/static/js/core/ui.js"></script>
+  <script src="/static/js/core/layout.js"></script>
+  {{if .Script}}<script src="{{.Script}}"></script>{{end}}
+{{end}}
+
+{{define "app-start"}}{{template "head" .}}
+<body class="bg-light-4 min-h-screen">
+{{template "navbar" .}}
+{{end}}
+
+{{define "app-end"}}
+{{template "scripts" .}}
+</body>
+</html>
+{{end}}
+
+{{define "layout-start"}}{{template "head" .}}
+<body class="bg-light-4">
+{{template "navbar" .}}
+<div class="h-screen bg-light-4 p-4 md:p-6 pt-20 md:pt-24 flex flex-col md:flex-row gap-6 overflow-hidden">
+  {{template "sidebar" .Sidebar}}
+  <main class="flex-1 min-w-0 flex flex-col min-h-0">
+{{end}}
+
+{{define "layout-end"}}
+  </main>
+</div>
+{{template "scripts" .}}
+</body>
+</html>
+{{end}}
