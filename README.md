@@ -1,7 +1,6 @@
 # Hook Repair (Go + HTML/CSS/JS)
 
-Proyecto en Go con la misma estructura que Website-Avante: Gin + `html/template`,
-MySQL, sesión en cookie firmada y JS sin frameworks.
+
 
 ## Correr en local
 
