@@ -1,7 +1,6 @@
 # Hook Repair (Go + HTML/CSS/JS)
 
-Proyecto en Go con la misma estructura que Website-Avante: Gin + `html/template`,
-MySQL, sesión en cookie firmada y JS sin frameworks.
+
 
 ## Correr en local
 
@@ -44,6 +43,20 @@ Tablas: `organizations`, `roles`, `users`, `categories`, `brands`,
 
 Los IDs son `BIGINT AUTO_INCREMENT`. El UPC de cada producto se arma al crearlo:
 `4` + `1` si lleva IMEI / `0` si no + el id con 10 dígitos (ej. `400000000001`).
+
+**Eliminar** no borra la fila: llena `deleted_at`, el registro deja de aparecer y
+su nombre (o email) se puede volver a usar. Así las órdenes y movimientos viejos
+conservan su historial. Si la base se creó con una versión anterior, al arrancar
+la app agrega sola las columnas nuevas (`db/schema.go → migrate`).
+
+## Reglas de validación
+
+- Teléfonos: solo números (se aceptan `+`, espacios, guiones y paréntesis), máximo 15 dígitos.
+- Contraseñas: mínimo 8 caracteres, con al menos una letra y un número.
+- Clientes con "Requiere facturar": RFC (12 o 13 caracteres, formato SAT), régimen fiscal y uso de CFDI obligatorios.
+- Roles: deben tener al menos un permiso; uno con usuarios asignados no se puede eliminar.
+- Siempre queda al menos un administrador activo (rol con `Users.Update` y `Roles.Update`) por organización.
+- Cada organización tiene los roles Administrador, Gerente, Técnico y Cajero (se crean solos al arrancar si faltan).
 
 ## Estilos
 
