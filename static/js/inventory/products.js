@@ -14,6 +14,7 @@
   let models = [];
   let suppliers = [];
   let filters = { name: '', category: '', brand: '', model: '', supplier: '' };
+  let statusFilter = ''; // tarjetas "Bajo stock" / "Agotados"
 
   const statusPill = (status) => {
     const s = ui.norm(status);
@@ -37,7 +38,8 @@
       (!filters.category || p.categoryId === filters.category) &&
       (!filters.brand || p.brandId === filters.brand) &&
       (!filters.model || (p.modelNames || []).some((m) => ui.norm(m).includes(filters.model.toLowerCase()))) &&
-      (!filters.supplier || p.supplierId === filters.supplier),
+      (!filters.supplier || p.supplierId === filters.supplier) &&
+      (!statusFilter || ui.norm(p.status) === statusFilter),
     sortValue: (p, k) =>
       ({ id: p.productNumber, category: p.categoryName, brand: p.brandName, models: p.modelName, stock: p.inStock, status: p.status }[k] ?? p[k]),
     render,
@@ -65,7 +67,27 @@
     onAction: (action, p) => (action === 'edit' ? openModal(p) : action === 'delete' ? openDelete(p) : openDetails(p)),
   });
 
+  // ── Resumen (tarjetas de arriba) ────────────────────────────────────
+  function renderStats() {
+    const rows = state.rows;
+    const count = (st) => rows.filter((p) => ui.norm(p.status) === st).length;
+    document.getElementById('stProducts').textContent = rows.length.toLocaleString('es-MX');
+    document.getElementById('stPieces').textContent = rows.reduce((a, p) => a + (Number(p.inStock) || 0), 0).toLocaleString('es-MX');
+    document.getElementById('stValue').textContent = ui.money(rows.reduce((a, p) => a + (Number(p.price) || 0) * (Number(p.inStock) || 0), 0));
+    document.getElementById('stLow').textContent = count('bajo stock');
+    document.getElementById('stOut').textContent = count('agotado');
+    document.querySelectorAll('#stats [data-status]').forEach((b) => b.classList.toggle('is-on', b.dataset.status === statusFilter));
+  }
+  document.querySelectorAll('#stats [data-status]').forEach((b) =>
+    b.addEventListener('click', () => {
+      statusFilter = statusFilter === b.dataset.status ? '' : b.dataset.status;
+      state.page = 1;
+      state.refresh();
+    })
+  );
+
   function render() {
+    renderStats();
     table.render(state.pageRows);
     ui.pagination(document.getElementById('pager'), { page: state.page, total: state.totalPages, onChange: (p) => state.goTo(p), layout: 'center' });
     const n = Object.values(filters).filter(Boolean).length;

@@ -2,9 +2,9 @@
    Piezas comunes de todas las páginas:
    - "head"      <head> con estilos, íconos y la sesión para el JS
    - "scripts"   JS común + el JS propio de la página (.Script)
-   - "app-start" / "app-end"  página con navbar (sin menú lateral)
-   - "layout-start" / "layout-end"  página con navbar + menú lateral
-     (Configuración o Inventario, según .Sidebar)
+   - "app-start" / "app-end"  menú lateral + barra de usuario + título
+   - "layout-start" / "layout-end"  lo mismo + pestañas de la sección
+     (Inventario o Configuración, según .Sidebar)
    ───────────────────────────────────────────────────────────────── */}}
 
 {{define "head"}}<!doctype html>
@@ -21,11 +21,13 @@
   <link rel="stylesheet" href="/static/css/partials/layout.css">
   <link rel="stylesheet" href="/static/css/partials/navbar.css">
   <link rel="stylesheet" href="/static/css/partials/sidebar.css">
+  <link rel="stylesheet" href="/static/css/partials/subnav.css">
   <link rel="stylesheet" href="/static/css/partials/list.css">
   <link rel="stylesheet" href="/static/css/partials/input.css">
   <link rel="stylesheet" href="/static/css/core/ui.css">
   {{range .Styles}}<link rel="stylesheet" href="{{.}}">
   {{end}}
+  <script src="/static/js/core/sidebar-state.js"></script>
   <script type="application/json" id="hook-session">{{.SessionJSON}}</script>
 </head>
 {{end}}
@@ -37,29 +39,33 @@
   {{if .Script}}<script src="{{.Script}}"></script>{{end}}
 {{end}}
 
-{{define "app-start"}}{{template "head" .}}
+{{define "page-start"}}{{template "head" .}}
 <body class="app">
-{{template "navbar" .}}
-{{end}}
-
-{{define "app-end"}}
-{{template "scripts" .}}
-</body>
-</html>
-{{end}}
-
-{{define "layout-start"}}{{template "head" .}}
-<body class="app">
-{{template "navbar" .}}
+{{template "userbar" .}}
 <div class="shell">
-  {{template "sidebar" .Sidebar}}
+  {{template "sidebar" .}}
   <main class="shell__main">
+    <div class="page-header">
+      <div>
+        {{if .Sidebar}}<div class="page-header__eyebrow">{{.Sidebar.Title}}</div>{{end}}
+        <h1 class="page-header__title">{{if .Heading}}{{.Heading}}{{else}}{{.Title}}{{end}}</h1>
+        {{if .Description}}<p class="page-header__text">{{.Description}}</p>{{end}}
+      </div>
+    </div>
 {{end}}
 
-{{define "layout-end"}}
+{{define "page-end"}}
   </main>
 </div>
 {{template "scripts" .}}
 </body>
 </html>
 {{end}}
+
+{{define "app-start"}}{{template "page-start" .}}{{end}}
+{{define "app-end"}}{{template "page-end" .}}{{end}}
+
+{{define "layout-start"}}{{template "page-start" .}}
+    {{template "subnav" .Sidebar}}
+{{end}}
+{{define "layout-end"}}{{template "page-end" .}}{{end}}

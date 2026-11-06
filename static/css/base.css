@@ -74,6 +74,24 @@
   --shadow-menu: 0 4px 20px rgba(0, 0, 0, 0.1);
 
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Estilo limpio (mismo sistema que Avante, con el rojo de Hook) */
+  --ink: #1d1d22;
+  --muted: #7a7f8c;
+  --line: #efe4e6;
+  --accent: #f1314c;
+  --accent-hover: #d92640;
+  --accent-soft: #fff3f5;
+  --accent-100: #ffe3e8;
+  --accent-border: #f5a3ae;
+  --radius-lg: 26px;
+  --radius-md: 18px;
+  --radius-sm: 14px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pop: cubic-bezier(0.22, 1.4, 0.36, 1);
+  --shadow-soft-sm: 0 1px 3px rgba(241, 49, 76, 0.06);
+  --shadow-soft-md: 0 14px 30px -16px rgba(241, 49, 76, 0.2);
+  --shadow-soft-lg: 0 26px 48px -18px rgba(241, 49, 76, 0.28);
 }
 
 /* ---------- Reset ---------- */
@@ -81,8 +99,8 @@
 html { -webkit-text-size-adjust: 100%; line-height: 1.5; }
 body {
   font-family: var(--font-label);
-  color: var(--dark-1);
-  background: var(--light-4);
+  color: var(--ink);
+  background: var(--white);
   -webkit-font-smoothing: antialiased;
 }
 img, svg { display: block; max-width: 100%; }

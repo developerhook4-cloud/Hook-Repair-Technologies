@@ -1,31 +1,49 @@
 /* =========================================================
    LISTAS — templates/partials/list.html
-   Tarjeta blanca de cada página, título, buscador y botón "Agregar".
+   Panel blanco con borde suave: barra de búsqueda y botones
+   arriba, la tabla, y la paginación abajo.
    ========================================================= */
 .page-card {
-  position: relative; flex: 1; min-height: 0;
+  position: relative;
   display: flex; flex-direction: column;
-  padding: 24px; overflow-y: auto; scroll-behavior: smooth;
-  background: var(--white); border-radius: 16px; box-shadow: var(--shadow-sm);
+  padding: 28px;
+  background: var(--white); border: 1.5px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft-md);
 }
-@media (min-width: 768px) { .page-card { padding: 40px; } }
+@media (max-width: 720px) { .page-card { padding: 20px; } }
 .page-card__inner { width: 100%; flex: 1; display: flex; flex-direction: column; }
 
-.page-title { margin-bottom: 32px; color: var(--dark-1); }
+/* El título ya va arriba de la página (page-header) */
+.page-title { display: none; }
 
-.list-toolbar { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+/* Panel de lista: sin relleno; cada parte trae el suyo */
+.page-card--panel { padding: 0; overflow: hidden; }
+.page-card--panel .list-toolbar,
+.page-card--panel .inv-toolbar { margin: 0; padding: 18px 24px; border-bottom: 1px solid var(--line); }
+.page-card--panel .data-table { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+.page-card--panel .card-list { margin: 0; border: 0; border-radius: 0; box-shadow: none; }
+.page-card--panel .pager { padding: 14px 24px; border-top: 1px solid var(--line); }
+
+.list-toolbar { display: flex; flex-direction: column; align-items: stretch; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
 @media (min-width: 640px) { .list-toolbar { flex-direction: row; align-items: center; } }
-.list-toolbar__add { width: 100%; }
-@media (min-width: 640px) { .list-toolbar__add { width: auto; } }
 
-/* Buscador con lupa */
-.search-box { position: relative; width: 100%; }
-@media (min-width: 768px) { .search-box { width: 320px; } }
-@media (min-width: 640px) { .search-box--wide { width: 380px; } }
-.search-box > i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none; }
-.search-box input {
-  width: 100%; padding: 10px 16px 10px 40px;
-  border: 1px solid var(--gray-200); border-radius: 9999px; box-shadow: var(--shadow-sm);
-  font-size: 16px; line-height: 24px; color: var(--dark-1); outline: none;
+/* ---------- Buscador con borde animado (como Avante) ---------- */
+@property --search-angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@keyframes searchSpin { to { --search-angle: 360deg; } }
+.search-box {
+  position: relative; width: 100%; padding: 1.5px; border-radius: 16px;
+  background: var(--line);
+  transition: background 0.2s;
 }
-.search-box input:focus { border-color: var(--brand); }
+@media (min-width: 640px) { .search-box { max-width: 340px; } }
+.search-box:focus-within {
+  background: conic-gradient(from var(--search-angle, 0deg), var(--accent), var(--accent-border), #ffffff, var(--accent-border), var(--accent));
+  animation: searchSpin 3.2s linear infinite;
+}
+.search-box > i { position: absolute; left: 16px; top: 50%; z-index: 1; transform: translateY(-50%); font-size: 13px; color: var(--accent); pointer-events: none; }
+.search-box input {
+  width: 100%; padding: 10px 14px 10px 40px;
+  background: var(--white); border: 0; border-radius: 14.5px; outline: none;
+  font-size: 13.5px; line-height: 20px; color: var(--ink);
+}
+.search-box input::placeholder { color: var(--muted); }
+.search-box--wide { max-width: 420px; }

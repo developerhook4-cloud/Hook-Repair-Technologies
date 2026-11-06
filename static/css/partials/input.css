@@ -2,23 +2,25 @@
    CAMPO CON ETIQUETA — templates/partials/input.html
    (formularios de página: Perfil, Información de la organización)
    ========================================================= */
-.form-field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.form-field__label { color: var(--dark-1); }
-.form-field__req { color: var(--danger); }
+.form-field { display: flex; flex-direction: column; gap: 7px; width: 100%; }
+.form-field__label { font-size: 12.5px !important; line-height: 16px !important; font-weight: 700; color: var(--muted); }
+.form-field__req { color: var(--accent); }
 .form-field__control { position: relative; width: 100%; }
 .form-field__input {
-  width: 100%; padding: 12px;
-  background: var(--white); border: 1px solid var(--light-2); border-radius: 8px; outline: none;
-  font-size: 16px; line-height: 24px; color: var(--dark-1);
-  transition: border-color 0.15s;
+  width: 100%; padding: 12px 14px;
+  background: var(--white); border: 1.5px solid var(--line); border-radius: var(--radius-sm); outline: none;
+  font-size: 14px; line-height: 20px; color: var(--ink);
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
 }
-.form-field__input::placeholder { color: var(--dark-4); }
-.form-field__input:focus { border-color: var(--brand); }
-.form-field__input--password { padding-right: 48px; letter-spacing: 0.1em; }
+.form-field__input::placeholder { color: #b3b6bf; }
+.form-field__input:hover { border-color: var(--accent-border); }
+.form-field__input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.form-field__input--password { padding-right: 48px; }
 .form-field__eye {
-  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  color: var(--dark-3); font-size: 18px; transition: color 0.15s;
+  color: var(--muted); font-size: 14px; transition: background 0.2s, color 0.2s;
 }
-.form-field__eye:hover { color: var(--dark-1); }
-.form-field__error { margin-top: 4px; color: var(--error); }
+.form-field__eye:hover { background: var(--accent-soft); color: var(--accent); }
+.form-field__error { color: #b3261e; }

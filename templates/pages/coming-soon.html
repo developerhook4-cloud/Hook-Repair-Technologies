@@ -1,31 +1,14 @@
 {{/* Secciones que todavía no existen ("Próximamente"). */}}
 
 {{define "coming-soon-card"}}
-<section class="soon-card">
-  <i class="fa-solid fa-hourglass-half soon-card__icon"></i>
-  <h1 class="soon-card__title">{{.Heading}}</h1>
+<section class="page-card soon-card">
+  <div class="soon-card__icon"><i class="fa-solid fa-hourglass-half"></i></div>
   <span class="soon-card__badge">Próximamente</span>
-  <p class="soon-card__text">Estamos trabajando en esta sección. Pronto estará disponible.</p>
-  <a href="/inventory" class="soon-card__link">Ir a Inventario</a>
+  <p class="soon-card__text">Estamos trabajando en {{.Heading}}. Pronto estará disponible.</p>
+  <a href="/inventory" class="btn btn--primary">Ir a Inventario</a>
 </section>
 {{end}}
 
-{{define "coming-soon"}}{{template "app-start" .}}
-<div class="soon-page">
-  <main class="soon-page__main">
-    {{template "coming-soon-card" .}}
-  </main>
-</div>
-{{template "app-end" .}}{{end}}
-
-{{define "coming-soon-settings"}}{{template "layout-start" .}}
-<div class="soon-panel">
-  {{template "coming-soon-card" .}}
-</div>
-{{template "layout-end" .}}{{end}}
-
-{{define "coming-soon-inventory"}}{{template "layout-start" .}}
-<div class="soon-panel">
-  {{template "coming-soon-card" .}}
-</div>
-{{template "layout-end" .}}{{end}}
+{{define "coming-soon"}}{{template "app-start" .}}{{template "coming-soon-card" .}}{{template "app-end" .}}{{end}}
+{{define "coming-soon-settings"}}{{template "layout-start" .}}{{template "coming-soon-card" .}}{{template "layout-end" .}}{{end}}
+{{define "coming-soon-inventory"}}{{template "layout-start" .}}{{template "coming-soon-card" .}}{{template "layout-end" .}}{{end}}

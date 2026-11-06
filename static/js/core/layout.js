@@ -1,79 +1,72 @@
 /*
-  Hook Repair — barra superior (navbar) y menú lateral (sidebar).
+  Hook Repair — menú lateral y barra de usuario.
+  - El menú se retrae a solo íconos (se recuerda en este navegador).
+  - Un "blob" rojo se desliza a la opción bajo el mouse y regresa a la activa.
+  - El avatar de arriba abre el menú de la cuenta.
 */
 (function () {
   'use strict';
 
-  // ── Navbar: la "pestaña" clara que sigue al mouse ───────────────────
-  const nav = document.getElementById('hook-navbar');
-  if (nav) {
-    const tab = nav.querySelector('[data-nav-tab]');
-    let active = nav.querySelector('[data-nav-link].is-active');
+  const root = document.documentElement;
 
-    const moveTo = (el) => {
-      if (!el) {
-        tab.style.opacity = '0';
-        return;
-      }
-      const n = nav.getBoundingClientRect();
-      const r = el.getBoundingClientRect();
-      tab.style.left = r.left - n.left + 'px';
-      tab.style.top = r.top - n.top + 'px';
-      tab.style.width = r.width + 'px';
-      tab.style.height = r.height + 'px';
-      tab.style.opacity = '1';
+  // ── Menú lateral ────────────────────────────────────────────────────
+  const sidebar = document.getElementById('appSidebar');
+  if (sidebar) {
+    const toggle = document.getElementById('sidebarToggle');
+    const nav = sidebar.querySelector('[data-nav]');
+    const blob = nav.querySelector('.app-nav__blob');
+    const links = Array.from(nav.querySelectorAll('.app-nav__link'));
+    const active = nav.querySelector('.app-nav__link.is-active');
+
+    const moveBlob = (el) => {
+      links.forEach((l) => l.classList.toggle('is-current', l === el));
+      if (!el) return blob.classList.remove('is-visible');
+      blob.style.top = el.offsetTop + 'px';
+      blob.style.height = el.offsetHeight + 'px';
+      blob.classList.add('is-visible');
     };
+    links.forEach((l) => l.addEventListener('mouseenter', () => moveBlob(l)));
+    nav.addEventListener('mouseleave', () => moveBlob(active));
+    // Sin animación la primera vez
+    blob.style.transition = 'none';
+    moveBlob(active);
+    requestAnimationFrame(() => requestAnimationFrame(() => (blob.style.transition = '')));
 
-    nav.querySelectorAll('[data-nav-link]').forEach((a) => {
-      a.addEventListener('mouseenter', () => moveTo(a));
-      a.addEventListener('click', () => (active = a));
-    });
-    nav.addEventListener('mouseleave', () => moveTo(active));
-    if (active) requestAnimationFrame(() => moveTo(active));
-    window.addEventListener('resize', () => moveTo(active));
-
-    nav.querySelectorAll('[data-logout]').forEach((a) =>
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        window.Hook.logout();
-      })
-    );
-  }
-
-  // ── Sidebar: colapsar / expandir y grupos desplegables ──────────────
-  const sb = document.getElementById('hook-sidebar');
-  if (sb) {
-    const toggle = sb.querySelector('[data-sidebar-toggle]');
-    const groups = Array.from(sb.querySelectorAll('[data-sb-item]'));
-
-    const setCollapsed = (collapsed) => {
-      sb.dataset.collapsed = collapsed ? '1' : '';
-      sb.classList.toggle('is-collapsed', collapsed);
-      if (collapsed) groups.forEach((g) => setExpanded(g, false));
-      toggle.innerHTML = `<i class="fa-solid fa-chevron-${collapsed ? 'right' : 'left'}"></i>`;
-      document.dispatchEvent(new CustomEvent('hook:sidebar', { detail: { collapsed } }));
-    };
-
-    const setExpanded = (g, expanded) => {
-      const subs = g.querySelector('[data-sb-subs]');
-      if (!subs) return;
-      subs.hidden = !expanded;
-      const chev = g.querySelector('[data-sb-chevron]');
-      if (chev) chev.classList.toggle('is-open', expanded);
-    };
-
-    toggle.addEventListener('click', () => setCollapsed(!sb.dataset.collapsed));
-
-    groups.forEach((g) => {
-      const row = g.querySelector('[data-sb-row]');
-      const subs = g.querySelector('[data-sb-subs]');
-      if (!subs) return; // las opciones sin subopciones son enlaces normales
-      row.addEventListener('click', () => {
-        if (sb.dataset.collapsed) setCollapsed(false);
-        const willOpen = subs.hidden;
-        groups.forEach((o) => o !== g && setExpanded(o, false));
-        setExpanded(g, willOpen);
-      });
+    toggle.addEventListener('click', () => {
+      const shrink = !root.classList.contains('sidebar-shrink');
+      root.classList.toggle('sidebar-shrink', shrink);
+      try {
+        localStorage.setItem('hookSidebar', shrink ? 'shrink' : 'open');
+      } catch (_) {}
+      toggle.setAttribute('aria-label', shrink ? 'Expandir menú' : 'Colapsar menú');
+      setTimeout(() => moveBlob(active), 320);
+      document.dispatchEvent(new CustomEvent('hook:sidebar', { detail: { collapsed: shrink } }));
     });
   }
+
+  // ── Menú de la cuenta ───────────────────────────────────────────────
+  const userbar = document.getElementById('userbar');
+  if (userbar) {
+    const trigger = userbar.querySelector('.userbar__trigger');
+    const setOpen = (open) => {
+      userbar.classList.toggle('is-open', open);
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setOpen(!userbar.classList.contains('is-open'));
+    });
+    document.addEventListener('click', (e) => {
+      if (!userbar.contains(e.target)) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && setOpen(false));
+  }
+
+  // ── Cerrar sesión ───────────────────────────────────────────────────
+  document.querySelectorAll('[data-logout]').forEach((a) =>
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.Hook.logout();
+    })
+  );
 })();

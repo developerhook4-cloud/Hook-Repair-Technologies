@@ -45,6 +45,7 @@ type PageData struct {
 	Script      string   // JS propio de la página (/static/js/...)
 	Styles      []string // CSS propio de la página (/static/css/...)
 	Heading     string   // título para "Próximamente"
+	Description string   // texto corto bajo el título de la página
 	Path        string
 }
 
@@ -152,9 +153,28 @@ var pageStyles = map[string]string{
 	"coming-soon-inventory":     "/static/css/pages/coming-soon.css",
 }
 
+// pageDescriptions — texto bajo el título de cada página.
+var pageDescriptions = map[string]string{
+	"dashboard":                 "Lo más importante del taller de un vistazo.",
+	"organizations":             "Los talleres que usan Hook: sus datos y sus usuarios.",
+	"inventory-products":        "El catálogo del inventario: precios, existencias y proveedores.",
+	"inventory-movements":       "Entradas, salidas y ajustes de stock de cada producto.",
+	"inventory-purchase-orders": "Pedidos a proveedores y la recepción de la mercancía.",
+	"settings-profile":          "Tu nombre, correo y contraseña.",
+	"settings-organization":     "Datos de contacto y ubicación del taller.",
+	"settings-users":            "Las personas que entran al sistema y su rol.",
+	"settings-roles":            "Qué puede ver y hacer cada rol.",
+	"settings-clients":          "Clientes públicos y distribuidores, con sus datos de facturación.",
+	"settings-suppliers":        "A quién le compras refacciones y equipos.",
+	"settings-categories":       "Cómo se agrupan los productos y las reparaciones.",
+	"settings-brands":           "Marcas de los dispositivos que reparas o vendes.",
+	"settings-models":           "Modelos de cada marca.",
+	"settings-services":         "Las reparaciones que ofreces y sus precios.",
+}
+
 func newPage(c *gin.Context, tmpl, title, script string) PageData {
 	u := currentUser(c)
-	p := PageData{Title: title, User: u, SessionJSON: sessionJSON(u), Script: script, Path: c.Request.URL.Path}
+	p := PageData{Title: title, User: u, SessionJSON: sessionJSON(u), Script: script, Path: c.Request.URL.Path, Description: pageDescriptions[tmpl]}
 	if css, ok := pageStyles[tmpl]; ok {
 		p.Styles = []string{css}
 	}
@@ -196,6 +216,7 @@ func ComingSoon(heading, layout string) gin.HandlerFunc {
 		}
 		p := newPage(c, tmpl, heading, "")
 		p.Heading = heading
+		p.Description = "Esta sección está en construcción."
 		switch layout {
 		case "settings":
 			p.Sidebar = buildSidebar("Configuración", "gear", settingsMenu(), p.Path, p.User)

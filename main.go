@@ -23,6 +23,23 @@ func loadTemplates() *template.Template {
 	funcs := template.FuncMap{
 		"lower":     strings.ToLower,
 		"hasPrefix": strings.HasPrefix,
+		// initials: "Super Admin" → "SA" (avatar de la barra de usuario)
+		"initials": func(name string) string {
+			out := ""
+			for _, w := range strings.Fields(name) {
+				for _, r := range w {
+					out += strings.ToUpper(string(r))
+					break
+				}
+				if len([]rune(out)) == 2 {
+					break
+				}
+			}
+			if out == "" {
+				return "?"
+			}
+			return out
+		},
 		// dict arma un mapa para pasarle varios valores a un template:
 		// {{template "input" dict "Label" "Nombre" "Name" "name"}}
 		"dict": func(kv ...any) map[string]any {

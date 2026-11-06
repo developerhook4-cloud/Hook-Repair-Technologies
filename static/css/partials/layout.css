@@ -1,17 +1,25 @@
 /* =========================================================
    ESTRUCTURA — templates/partials/base.html
-   .app    página con navbar (Dashboard, Organizaciones…)
-   .shell  navbar + menú lateral + contenido (Configuración, Inventario)
+   Menú lateral a la izquierda + contenido, y el título de cada
+   página arriba (mismo acomodo que el panel de Avante).
    ========================================================= */
-.app { min-height: 100vh; background: var(--light-4); }
+body.app {
+  min-height: 100vh;
+  background: var(--white);
+  background-image: radial-gradient(circle at 100% 0%, rgba(241, 49, 76, 0.06), transparent 45%);
+}
 
-.shell {
-  height: 100vh; overflow: hidden;
-  display: flex; flex-direction: column; gap: 24px;
-  padding: 80px 16px 16px;
-  background: var(--light-4);
+.shell { display: flex; align-items: flex-start; gap: 32px; padding: 20px 32px 90px 24px; }
+.shell__main { flex: 1; min-width: 0; display: flex; flex-direction: column; animation: pageIn 0.45s var(--ease-out) both; }
+@keyframes pageIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (max-width: 900px) {
+  .shell { flex-direction: column; align-items: stretch; gap: 22px; padding: 16px 18px 70px; }
+  .shell__main { width: 100%; }
 }
-@media (min-width: 768px) {
-  .shell { flex-direction: row; padding: 96px 24px 24px; }
-}
-.shell__main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+
+/* Título de la página */
+.page-header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+.page-header__eyebrow { margin-bottom: 6px; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.page-header__title { font-family: var(--font-heading); font-size: 30px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+.page-header__text { margin-top: 6px; max-width: 560px; font-size: 14px; color: var(--muted); }
+@media (max-width: 720px) { .page-header__title { font-size: 24px; } }

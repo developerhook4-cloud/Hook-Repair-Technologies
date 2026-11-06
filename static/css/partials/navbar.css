@@ -1,60 +1,53 @@
 /* =========================================================
-   NAVBAR — barra roja superior (templates/partials/navbar.html)
-   La "pestaña" clara que sigue al mouse la mueve core/layout.js.
+   BARRA DE USUARIO — templates/partials/navbar.html
+   Arriba a la derecha: avatar + nombre; al tocarlo, el menú
+   de la cuenta (core/layout.js lo abre y lo cierra).
    ========================================================= */
-.navbar {
-  position: fixed; top: 0; left: 0; z-index: 50;
-  width: 100%; padding: 8px 16px;
-  background: var(--brand);
-}
-.navbar__inner {
-  width: 100%; margin: 0 auto;
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-}
-@media (min-width: 640px) { .navbar__inner { max-width: 640px; } }
-@media (min-width: 768px) { .navbar__inner { max-width: 768px; } }
-@media (min-width: 1024px) { .navbar { padding: 8px 32px; } .navbar__inner { max-width: 1024px; } }
-@media (min-width: 1280px) { .navbar__inner { max-width: 1280px; } }
-@media (min-width: 1536px) { .navbar__inner { max-width: 1536px; } }
+.userbar-outer { position: sticky; top: 0; z-index: 40; display: flex; justify-content: flex-end; padding: 20px 32px 0; pointer-events: none; }
+.userbar-row { display: flex; justify-content: flex-end; pointer-events: auto; }
+@media (max-width: 900px) { .userbar-outer { position: static; padding: 14px 18px 0; } }
 
-.navbar__tab {
-  position: absolute; z-index: 0; pointer-events: none;
-  background: var(--brand-lighter); border-radius: 8px; box-shadow: var(--shadow-md);
-  transition: all 0.3s ease-in-out;
+.userbar { position: relative; }
+.userbar__trigger {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 14px 5px 5px;
+  background: var(--white); border: 1px solid var(--line); border-radius: 999px;
+  transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
 }
-
-.navbar__group { display: flex; align-items: center; gap: 8px; }
-.navbar__group--main { flex-wrap: wrap; }
-@media (min-width: 1024px) { .navbar__group { gap: 16px; } }
-
-.navbar__link {
-  position: relative; z-index: 10;
-  padding: 6px 16px;
-  font-size: 16px; line-height: 24px; font-weight: 600;
-  color: var(--light-4); cursor: pointer;
-  transition: color 0.15s var(--ease);
+.userbar__trigger:hover { border-color: var(--accent-border); box-shadow: 0 6px 16px -8px rgba(241, 49, 76, 0.3); }
+.userbar__avatar {
+  width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--white); font-size: 12.5px; font-weight: 700;
 }
-.navbar__logo img { height: 32px; }
+.userbar__avatar--lg { width: 40px; height: 40px; font-size: 14px; }
+.userbar__name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; font-weight: 600; color: var(--ink); }
+.userbar__caret { font-size: 11px; color: var(--muted); transition: transform 0.25s var(--ease-out); }
+.userbar.is-open .userbar__caret { transform: rotate(180deg); }
+@media (max-width: 720px) { .userbar__name { display: none; } .userbar__trigger { padding: 5px 10px 5px 5px; } }
 
-/* ---------- Menú de la cuenta ---------- */
-.navbar__account { position: relative; display: flex; align-items: center; padding: 8px 0; }
-.account-menu { position: absolute; top: 100%; right: 0; display: none; padding-top: 8px; }
-.navbar__account:hover .account-menu,
-.navbar__account:focus-within .account-menu { display: block; }
-
-.account-menu__card { min-width: 288px; padding: 12px; background: var(--white); border-radius: 16px; box-shadow: var(--shadow-card); }
-.account-menu__user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-.account-menu__avatar { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--dark-1); }
-.account-menu__info { display: flex; flex-direction: column; }
-.account-menu__name-row { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
-.account-menu__name { font-size: 16px; font-weight: 700; color: var(--dark-1); }
-.account-menu__role { padding: 4px 8px; border-radius: 9999px; background: var(--info-subtle); color: var(--info-darker); font-size: 12px; line-height: 16px; font-weight: 600; }
-.account-menu__email { font-size: 14px; line-height: 20px; color: var(--dark-3); }
-.account-menu__divider { height: 4px; margin-top: 8px; border-top: 1px solid var(--gray-200); }
-.account-menu__link {
-  display: flex; align-items: center; padding: 8px; border-radius: 16px;
-  color: var(--dark-2); font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer;
+.userbar__menu {
+  position: absolute; top: calc(100% + 12px); right: 0; z-index: 90;
+  width: 260px; padding: 8px;
+  background: var(--white); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow-soft-lg);
+  opacity: 0; transform: translateY(-8px) scale(0.96); transform-origin: top right; pointer-events: none;
+  transition: opacity 0.22s var(--ease-out), transform 0.22s var(--ease-out);
 }
-.account-menu__divider + li .account-menu__link { margin-top: 8px; }
-.account-menu__link:hover { background: var(--light-3); }
-.account-menu__icon { width: 28px; height: 28px; flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center; }
+.userbar.is-open .userbar__menu { opacity: 1; transform: none; pointer-events: auto; }
+.userbar__head { display: flex; align-items: center; gap: 11px; margin-bottom: 8px; padding: 10px 10px 14px; border-bottom: 1px solid var(--line); }
+.userbar__who { min-width: 0; }
+.userbar__who-name { font-size: 13.5px; font-weight: 700; line-height: 1.3; color: var(--ink); }
+.userbar__who-email { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+.userbar__role { display: inline-block; margin-top: 6px; padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 700; }
+.userbar__link {
+  display: flex; align-items: center; gap: 11px; padding: 10px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  transition: background 0.18s var(--ease-out), color 0.18s var(--ease-out);
+}
+.userbar__link i { width: 16px; text-align: center; color: var(--muted); transition: color 0.18s var(--ease-out); }
+.userbar__link:hover { background: var(--accent-soft); color: var(--accent-hover); }
+.userbar__link:hover i { color: var(--accent); }
+.userbar__divider { height: 1px; margin: 6px 4px; background: var(--line); }
+.userbar__link--logout, .userbar__link--logout i { color: #c0392b; }
+.userbar__link--logout:hover { background: #fdecea; color: #c0392b; }
+.userbar__link--logout:hover i { color: #c0392b; }

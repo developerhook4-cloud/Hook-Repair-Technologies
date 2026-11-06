@@ -1,42 +1,41 @@
 {{define "sidebar"}}
-{{/* Menú lateral de Configuración / Inventario (core/layout.js lo colapsa). */}}
-<aside id="hook-sidebar" class="sidebar">
-  <div class="sidebar__head">
-    <div data-sb-text class="sidebar__title">
-      <i class="fa-solid fa-{{.Icon}}"></i>
-      <span>{{.Title}}</span>
-    </div>
-    <button type="button" data-sidebar-toggle class="sidebar__toggle" aria-label="Colapsar menú">
-      <i class="fa-solid fa-chevron-left"></i>
-    </button>
-  </div>
+{{/* Menú lateral principal (igual que el de Avante). core/layout.js lo
+   colapsa (se recuerda en el navegador) y mueve el resaltado (blob). */}}
+<aside class="app-sidebar" id="appSidebar">
+  <button type="button" class="app-sidebar__toggle" id="sidebarToggle" aria-label="Colapsar menú" title="Colapsar">
+    <i class="fa-solid fa-chevron-left"></i>
+  </button>
 
-  <ul class="sidebar__menu">
-    {{range .Items}}
-    <li data-sb-item class="sidebar__item{{if .Active}} is-active{{end}}">
-      {{if .Subs}}
-      <div data-sb-row class="sidebar__row" title="{{.Label}}">
-        <span class="sidebar__row-label">
-          <i class="sidebar__icon fa-solid fa-{{.Icon}}"></i>
-          <span data-sb-text>{{.Label}}</span>
-        </span>
-        <i data-sb-text data-sb-chevron class="sidebar__chevron fa-solid fa-chevron-down{{if .Expanded}} is-open{{end}}"></i>
-      </div>
-      <ul data-sb-subs class="sidebar__subs" {{if not .Expanded}}hidden{{end}}>
-        {{range .Subs}}
-        <li><a href="{{.Route}}" class="sidebar__sub{{if .Active}} is-active{{end}}">{{.Label}}</a></li>
-        {{end}}
-      </ul>
-      {{else}}
-      <a href="{{.Route}}" data-sb-row class="sidebar__row" title="{{.Label}}">
-        <span class="sidebar__row-label">
-          <i class="sidebar__icon fa-solid fa-{{.Icon}}"></i>
-          <span data-sb-text>{{.Label}}</span>
-        </span>
-      </a>
-      {{end}}
-    </li>
+  <a href="/dashboard" class="app-brand" title="Ir al inicio">
+    <img src="/static/img/hook-mark.svg" alt="" class="app-brand__mark" width="36" height="36">
+    <img src="/static/img/LOGO_RN.svg" alt="Hook Technologies" class="app-brand__logo">
+  </a>
+
+  <nav class="app-nav" data-nav>
+    <span class="app-nav__blob" aria-hidden="true"></span>
+    <a href="/dashboard" class="app-nav__link{{if hasPrefix .Path "/dashboard"}} is-active{{end}}"><i class="fa-solid fa-table-cells-large"></i><span>Resumen</span><span class="app-nav__tip">Resumen</span></a>
+    {{if .Can "Organizations.View"}}
+    <a href="/organizations" class="app-nav__link{{if hasPrefix .Path "/organizations"}} is-active{{end}}"><i class="fa-solid fa-building"></i><span>Organizaciones</span><span class="app-nav__tip">Organizaciones</span></a>
     {{end}}
-  </ul>
+    {{if .Can "Pos.View"}}
+    <a href="/point-of-sale" class="app-nav__link{{if hasPrefix .Path "/point-of-sale"}} is-active{{end}}"><i class="fa-solid fa-cash-register"></i><span>Punto de venta</span><span class="app-nav__tip">Punto de venta</span></a>
+    {{end}}
+    {{if .Can "Repairs.View"}}
+    <a href="/repairs" class="app-nav__link{{if hasPrefix .Path "/repairs"}} is-active{{end}}"><i class="fa-solid fa-screwdriver-wrench"></i><span>Reparaciones</span><span class="app-nav__tip">Reparaciones</span></a>
+    {{end}}
+    {{if .Can "Inventory.View"}}
+    <a href="/inventory" class="app-nav__link{{if hasPrefix .Path "/inventory"}} is-active{{end}}"><i class="fa-solid fa-boxes-stacked"></i><span>Inventario</span><span class="app-nav__tip">Inventario</span></a>
+    {{end}}
+    {{if .Can "Reports.View"}}
+    <a href="/reports" class="app-nav__link{{if hasPrefix .Path "/reports"}} is-active{{end}}"><i class="fa-solid fa-chart-line"></i><span>Reportes</span><span class="app-nav__tip">Reportes</span></a>
+    {{end}}
+    <a href="/settings" class="app-nav__link{{if hasPrefix .Path "/settings"}} is-active{{end}}"><i class="fa-solid fa-gear"></i><span>Configuración</span><span class="app-nav__tip">Configuración</span></a>
+  </nav>
+
+  <div class="app-nav__divider"></div>
+
+  <nav class="app-nav app-nav--plain">
+    <a href="/logout" data-logout class="app-nav__link app-nav__link--logout"><i class="fa-solid fa-right-from-bracket"></i><span>Cerrar sesión</span><span class="app-nav__tip">Cerrar sesión</span></a>
+  </nav>
 </aside>
 {{end}}

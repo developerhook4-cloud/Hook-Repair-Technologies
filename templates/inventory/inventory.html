@@ -26,6 +26,13 @@
 {{end}}
 
 {{define "inventory-products"}}{{template "layout-start" .}}
+<div class="inv-stats" id="stats">
+  <div class="inv-stat"><small>Productos</small><strong id="stProducts">0</strong></div>
+  <div class="inv-stat"><small>Piezas en stock</small><strong id="stPieces">0</strong></div>
+  <div class="inv-stat is-accent"><small>Valor a costo</small><strong id="stValue">$0.00</strong></div>
+  <button type="button" class="inv-stat is-warn" data-status="bajo stock"><small>Bajo stock</small><strong id="stLow">0</strong><span>Ver ›</span></button>
+  <button type="button" class="inv-stat is-danger" data-status="agotado"><small>Agotados</small><strong id="stOut">0</strong><span>Ver ›</span></button>
+</div>
 {{template "settings-card-start" .}}
   {{template "inventory-toolbar" dict "Title" "Gestionar productos" "Placeholder" "Buscar por ID, nombre, UPC..." "Filters" true "Export" "Exportar" "Button" (and (.Can "Inventory.Update") "Crear producto")}}
   <div id="table"></div>

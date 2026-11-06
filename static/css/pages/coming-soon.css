@@ -1,26 +1,11 @@
 /* =========================================================
    PRÓXIMAMENTE — templates/pages/coming-soon.html
    ========================================================= */
-.soon-page { min-height: 100vh; display: flex; padding: 80px 16px 16px; background: var(--light-4); }
-@media (min-width: 768px) { .soon-page { padding: 96px 24px 24px; } }
-.soon-page__main { flex: 1; display: flex; align-items: center; justify-content: center; }
-
-.soon-panel {
-  flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
-  padding: 24px; background: var(--white); border-radius: 16px; box-shadow: var(--shadow-sm);
+.soon-card { align-items: center; text-align: center; padding: 56px 24px; }
+.soon-card__icon {
+  width: 64px; height: 64px; margin-bottom: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent); font-size: 24px;
 }
-@media (min-width: 768px) { .soon-panel { padding: 40px; } }
-
-.soon-card { width: 100%; max-width: 512px; padding: 40px; text-align: center; background: var(--white); border-radius: 16px; box-shadow: var(--shadow-card); }
-.soon-card__icon { font-size: 48px; color: var(--brand); }
-.soon-card__title { margin-top: 16px; font-family: var(--font-heading); font-size: 24px; line-height: 32px; font-weight: 700; color: var(--dark-1); }
-.soon-card__badge {
-  display: inline-block; margin-top: 12px; padding: 4px 12px; border-radius: 9999px;
-  background: var(--info-subtle); color: var(--info-darker); font-size: 12px; line-height: 16px; font-weight: 600;
-}
-.soon-card__text { margin-top: 16px; color: var(--dark-3); }
-.soon-card__link {
-  display: inline-block; margin-top: 24px; padding: 8px 20px; border-radius: 12px;
-  background: var(--brand); color: var(--light-4); font-weight: 600; transition: opacity 0.15s;
-}
-.soon-card__link:hover { opacity: 0.9; }
+.soon-card__badge { padding: 5px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.soon-card__text { max-width: 420px; margin: 14px 0 22px; font-size: 14px; color: var(--muted); }

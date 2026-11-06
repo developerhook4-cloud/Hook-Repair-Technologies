@@ -1,0 +1,18 @@
+{{define "subnav"}}
+{{/* Pestañas de la sección (Inventario / Configuración). Si la opción
+   activa tiene subopciones, salen en una segunda fila. */}}
+{{if .}}
+<nav class="subnav" aria-label="{{.Title}}">
+  <div class="subnav__row">
+    {{range .Items}}
+    <a href="{{if .Subs}}{{(index .Subs 0).Route}}{{else}}{{.Route}}{{end}}" class="subnav__tab{{if .Active}} is-on{{end}}"><i class="fa-solid fa-{{.Icon}}"></i>{{.Label}}</a>
+    {{end}}
+  </div>
+  {{range .Items}}{{if and .Active .Subs}}
+  <div class="subnav__row subnav__row--subs">
+    {{range .Subs}}<a href="{{.Route}}" class="subnav__sub{{if .Active}} is-on{{end}}">{{.Label}}</a>{{end}}
+  </div>
+  {{end}}{{end}}
+</nav>
+{{end}}
+{{end}}

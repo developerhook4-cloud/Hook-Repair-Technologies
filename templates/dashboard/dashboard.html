@@ -1,7 +1,8 @@
 {{define "dashboard"}}{{template "app-start" .}}
-<div class="dashboard">
-  <main class="dashboard__main">
-    <h1 class="heading-2">Dashboard</h1>
-  </main>
-</div>
+<section class="page-card dashboard-empty">
+  <div class="dashboard-empty__icon"><i class="fa-solid fa-chart-simple"></i></div>
+  <h2 class="dashboard-empty__title">Muy pronto verás aquí el resumen del taller</h2>
+  <p class="dashboard-empty__text">Ventas del día, reparaciones en curso y productos por agotarse. Mientras tanto, entra a Inventario desde el menú.</p>
+  <a href="/inventory" class="btn btn--primary">Ir a Inventario</a>
+</section>
 {{template "app-end" .}}{{end}}

@@ -1,45 +1,88 @@
 /* =========================================================
-   MENÚ LATERAL — Configuración e Inventario
-   (templates/partials/sidebar.html). core/layout.js pone
-   .is-collapsed para dejar solo los íconos.
+   MENÚ LATERAL — templates/partials/sidebar.html
+   Igual que el de Avante: tarjeta blanca pegada al lado, logo
+   arriba, un "blob" rojo que se desliza a la opción activa y
+   se puede retraer a solo íconos (core/layout.js).
    ========================================================= */
-.sidebar {
-  position: relative; flex-shrink: 0; overflow: hidden;
-  width: 100%; padding: 24px;
-  display: flex; flex-direction: column; gap: 24px;
-  background: var(--white); border-radius: 24px; box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease-in-out;
+.app-sidebar {
+  position: sticky; top: 20px; z-index: 10; flex-shrink: 0;
+  width: 236px; padding: 18px;
+  display: flex; flex-direction: column; gap: 3px;
+  background: var(--white); border: 1.5px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-soft-md);
+  transition: width 0.3s var(--ease-out);
 }
-@media (min-width: 768px) { .sidebar { width: 260px; height: 100%; } }
+.sidebar-shrink .app-sidebar { width: 84px; }
 
-.sidebar__head { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
-.sidebar__title { display: flex; align-items: center; gap: 12px; color: var(--brand); font-size: 20px; line-height: 28px; font-weight: 700; white-space: nowrap; }
-.sidebar__toggle {
-  display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 8px;
-  color: var(--gray-400); font-size: 14px; transition: color 0.15s, background 0.15s;
+.app-sidebar__toggle {
+  position: absolute; top: 22px; right: -13px; z-index: 6;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: var(--white); font-size: 11px;
+  box-shadow: 0 6px 16px -4px rgba(241, 49, 76, 0.5);
+  transition: transform 0.3s var(--ease-out), background 0.2s var(--ease-out);
 }
-.sidebar__toggle:hover { color: var(--dark-1); background: var(--gray-100); }
+.app-sidebar__toggle:hover { background: var(--accent-hover); }
+.sidebar-shrink .app-sidebar__toggle { transform: rotate(180deg); }
 
-.sidebar__menu { display: flex; flex-direction: column; gap: 8px; width: 100%; overflow-y: auto; font-size: 16px; line-height: 24px; font-weight: 600; }
-.sidebar__item { display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; color: var(--dark-1); transition: background 0.15s, color 0.15s; }
-.sidebar__item:hover { background: var(--gray-50); }
-.sidebar__item.is-active { background: var(--brand); color: var(--white); box-shadow: var(--shadow-md); }
-
-.sidebar__row { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; transition: all 0.3s; }
-.sidebar__row-label { display: flex; align-items: center; gap: 16px; white-space: nowrap; }
-.sidebar__icon { width: 20px; font-size: 18px; text-align: center; }
-.sidebar__chevron { font-size: 14px; transition: transform 0.2s; }
-.sidebar__chevron.is-open { transform: rotate(180deg); }
-
-.sidebar__subs { display: flex; flex-direction: column; padding-bottom: 12px; font-size: 15px; font-weight: 500; white-space: nowrap; }
-.sidebar__sub { display: block; margin: 0 12px 4px; padding: 8px 40px; border-radius: 8px; transition: background 0.15s; }
-.sidebar__sub:hover, .sidebar__sub.is-active { background: var(--brand-lighter); }
-
-/* Colapsado: solo íconos */
-@media (min-width: 768px) {
-  .sidebar.is-collapsed { width: 90px; padding: 16px; }
+/* Logo */
+.app-brand {
+  display: flex; align-items: center; gap: 11px; overflow: hidden; flex-shrink: 0;
+  margin-bottom: 14px; padding: 4px 6px 16px; border-bottom: 1px solid var(--line);
+  transition: gap 0.3s var(--ease-out), padding 0.3s var(--ease-out);
 }
-.sidebar.is-collapsed [data-sb-text] { display: none; }
-.sidebar.is-collapsed .sidebar__head { justify-content: center; margin-top: 8px; padding: 0; }
-.sidebar.is-collapsed .sidebar__row { justify-content: center; padding-left: 0; padding-right: 0; }
-.sidebar.is-collapsed .sidebar__icon { width: auto; }
+.app-brand__mark { width: 36px; height: 36px; flex-shrink: 0; transition: transform 0.3s var(--ease-pop); }
+.app-brand:hover .app-brand__mark { transform: rotate(-6deg) scale(1.06); }
+.app-brand__logo { height: 26px; width: auto; max-width: 140px; opacity: 1; transition: max-width 0.3s var(--ease-out), opacity 0.2s var(--ease-out); }
+.sidebar-shrink .app-brand { gap: 0; padding-left: 0; padding-right: 0; justify-content: center; }
+.sidebar-shrink .app-brand__logo { max-width: 0; opacity: 0; }
+
+/* Opciones */
+.app-nav { position: relative; display: flex; flex-direction: column; gap: 3px; }
+.app-nav__blob {
+  position: absolute; left: 0; right: 0; top: 0; height: 0; z-index: 0; pointer-events: none;
+  background: var(--accent); border-radius: 14px; box-shadow: 0 10px 20px -10px rgba(241, 49, 76, 0.45);
+  opacity: 0;
+  transition: top 0.28s cubic-bezier(1, 0.2, 0.1, 1.2), height 0.28s cubic-bezier(1, 0.2, 0.1, 1.2), opacity 0.18s ease;
+}
+.app-nav__blob.is-visible { opacity: 1; }
+.app-nav__link {
+  position: relative; z-index: 1;
+  display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 14px;
+  font-size: 13.5px; font-weight: 600; color: var(--muted); white-space: nowrap;
+  transition: color 0.2s var(--ease-out), background 0.2s var(--ease-out);
+}
+.app-nav__link > i { width: 18px; font-size: 15px; text-align: center; flex-shrink: 0; }
+.app-nav__link:hover { color: var(--ink); }
+.app-nav__link.is-current { color: var(--white); }
+.app-nav__divider { height: 1px; margin: 10px 6px; background: var(--line); }
+.app-nav--plain .app-nav__link:hover { background: var(--accent-soft); color: var(--ink); }
+.app-nav__link--logout, .app-nav__link--logout:hover { color: #c0392b !important; }
+.app-nav--plain .app-nav__link--logout:hover { background: #fdecea; }
+
+/* Retraído: solo íconos, con globito al pasar el mouse */
+.sidebar-shrink .app-nav__link { justify-content: center; padding: 11px; }
+.sidebar-shrink .app-nav__link > span:not(.app-nav__tip) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+.app-nav__tip {
+  display: none; position: absolute; left: calc(100% + 12px); top: 50%; z-index: 20;
+  padding: 8px 13px; border-radius: 10px; background: var(--ink); color: var(--white);
+  font-size: 12px; font-weight: 600; white-space: nowrap;
+  opacity: 0; transform: translateY(-50%) translateX(-6px); pointer-events: none;
+  transition: opacity 0.2s var(--ease-out), transform 0.2s var(--ease-out);
+}
+.sidebar-shrink .app-nav__tip { display: block; }
+.sidebar-shrink .app-nav__link:hover .app-nav__tip { opacity: 1; transform: translateY(-50%) translateX(0); }
+
+/* Celular: barra horizontal con scroll */
+@media (max-width: 900px) {
+  .app-sidebar, .sidebar-shrink .app-sidebar {
+    position: static; width: 100%; padding: 10px; flex-direction: row; align-items: center; gap: 8px; overflow-x: auto;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent);
+    mask-image: linear-gradient(90deg, #000 calc(100% - 30px), transparent);
+  }
+  .app-sidebar::-webkit-scrollbar { display: none; }
+  .app-sidebar__toggle, .app-brand, .app-nav__divider, .app-nav__blob, .app-nav__tip { display: none !important; }
+  .app-nav { flex-direction: row; }
+  .app-nav__link, .sidebar-shrink .app-nav__link { flex-shrink: 0; padding: 10px 14px; }
+  .sidebar-shrink .app-nav__link > span:not(.app-nav__tip) { position: static; width: auto; height: auto; clip: auto; }
+  .app-nav__link.is-active { background: var(--accent); color: var(--white); }
+}

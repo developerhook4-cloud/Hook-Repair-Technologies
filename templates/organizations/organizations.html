@@ -1,25 +1,20 @@
 {{define "organizations"}}{{template "app-start" .}}
 <div class="orgs-page">
-  <div class="orgs-page__inner">
-    <div id="orgListPanel" class="orgs-panel">
-      <div class="orgs-panel__head">
-        <h2 class="heading-6">Organizaciones</h2>
-        <div class="orgs-panel__tools">
-          <div class="orgs-search">
-            <input id="search" type="text" placeholder="Buscar por nombre o correo..." autocomplete="off" class="form-field__input orgs-search__input" />
-            <i class="fa-solid fa-search"></i>
-          </div>
-          {{if .Can "Organizations.Update"}}
-          <button id="addOrgBtn" type="button" class="btn btn--primary-dark btn--lg orgs-panel__add">
-            <i class="fa-solid fa-plus"></i><span class="orgs-panel__add-text">Crear organización</span>
-          </button>
-          {{end}}
-        </div>
+  <div id="orgListPanel" class="page-card page-card--panel orgs-panel">
+    <div class="list-toolbar">
+      <div class="search-box">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input id="search" type="text" placeholder="Buscar por nombre o correo..." autocomplete="off" />
       </div>
-      <div class="orgs-panel__table" id="orgTable"></div>
+      {{if .Can "Organizations.Update"}}
+      <button id="addOrgBtn" type="button" class="btn btn--primary">
+        <i class="fa-solid fa-plus"></i><span class="orgs-panel__add-text">Crear organización</span>
+      </button>
+      {{end}}
     </div>
-
-    <div id="orgDetail" class="org-detail" hidden></div>
+    <div class="orgs-panel__table" id="orgTable"></div>
   </div>
+
+  <div id="orgDetail" class="page-card org-detail" hidden></div>
 </div>
 {{template "app-end" .}}{{end}}
