@@ -592,14 +592,15 @@
   };
 
   /** Campo de texto con etiqueta (estilo de los modales). */
-  ui.field = function ({ label, name, value = '', type = 'text', placeholder = '', required = false, readonly = false, span = '', inputClass = '', prefix = '' }) {
+  ui.field = function ({ label, name, value = '', type = 'text', placeholder = '', required = false, readonly = false, span = '', inputClass = '', prefix = '', phone = false, hint = '' }) {
     const pad = prefix ? 'pl-8 pr-4' : 'px-4';
-    const input = `<input type="${type}" name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${readonly ? 'readonly' : ''}
+    const input = `<input type="${type}" name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${readonly ? 'readonly' : ''} ${phone ? 'data-phone' : ''}
         class="w-full border border-gray-300 rounded-[14px] ${pad} py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 ${readonly ? 'bg-gray-50' : ''} ${inputClass}" ${type === 'number' ? 'step="any"' : ''}/>`;
     return `
       <div class="flex flex-col gap-1.5 ${span}">
         <label class="label-normal text-dark-1">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
         ${prefix ? `<div class="relative w-full"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 body-normal">${esc(prefix)}</span>${input}</div>` : input}
+        <small data-error-for="${name}" class="label-small text-error-primary" hidden></small>${hint ? `<span class="label-small text-gray-400">${esc(hint)}</span>` : ''}
       </div>`;
   };
 
@@ -673,10 +674,127 @@
     return api;
   };
 
+  // ── Teléfonos, contraseñas y RFC (mismas reglas que el servidor) ──
+
+  /** Teléfono válido: solo números (+, espacios, guiones, paréntesis) y máx. 15 dígitos. */
+  ui.isPhone = (v) => {
+    const t = String(v || '').trim();
+    if (!t) return true;
+    const digits = t.replace(/\D/g, '').length;
+    return /^[0-9+\-\s().]+$/.test(t) && digits >= 1 && digits <= 15;
+  };
+
+  /** Contraseña segura: 8+ caracteres, con al menos una letra y un número. */
+  ui.passwordError = (v) => {
+    const t = String(v || '');
+    if (t.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';
+    if (!/[A-Za-zÁÉÍÓÚáéíóúÑñÜü]/.test(t) || !/[0-9]/.test(t)) return 'La contraseña debe tener al menos una letra y un número.';
+    return '';
+  };
+  ui.PASSWORD_HINT = 'Mínimo 8 caracteres, con al menos una letra y un número.';
+
+  /** RFC con formato del SAT: 12 (persona moral) o 13 (persona física) caracteres. */
+  ui.isRFC = (v) => /^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/.test(String(v || '').trim().toUpperCase());
+
+  /**
+   * Quita lo que no sea número en los campos de teléfono mientras se escribe.
+   * Marca los inputs con data-phone (o pásalos directo).
+   */
+  ui.phoneInputs = function (scope = document) {
+    scope.querySelectorAll('input[data-phone]').forEach((input) => {
+      input.setAttribute('inputmode', 'tel');
+      input.setAttribute('maxlength', '20');
+      input.addEventListener('input', () => {
+        const clean = input.value.replace(/[^0-9+\-\s().]/g, '');
+        if (clean !== input.value) input.value = clean;
+      });
+    });
+  };
+
   ui.rules = {
     required: [(v) => !!v, 'Este campo es obligatorio.'],
     email: [(v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), 'El formato debe ser válido.'],
     pattern: (re) => [(v) => !v || re.test(v), 'El formato ingresado no es válido.'],
+    phone: [(v) => ui.isPhone(v), 'Solo números, máximo 15 dígitos.'],
+    password: [(v) => !v || !ui.passwordError(v), 'Mínimo 8 caracteres, con al menos una letra y un número.'],
+  };
+
+  // ── Alta rápida desde otro formulario ───────────────────────────────
+
+  /**
+   * Botón "+ Nueva" para la etiqueta de un campo: crea el registro sin salir
+   * del formulario actual (categoría, marca, modelo, proveedor…).
+   */
+  ui.quickAddBtn = (key, text = 'Nueva') =>
+    `<button type="button" data-quick-add="${key}" class="ml-auto label-small font-bold text-brand-primary hover:underline inline-flex items-center gap-1">${ui.icon('plus', 'text-[10px]')} ${esc(text)}</button>`;
+
+  /**
+   * Modal pequeño encima del actual para dar de alta un registro.
+   *  title, fields: [{ name, label, type, placeholder, required, phone }]
+   *  note: texto opcional arriba de los campos
+   *  validate(values) → '' o mensaje de error
+   *  save(values) → Promise con el registro creado ({ id, name, ... })
+   *  onCreated(record)
+   */
+  ui.quickAdd = function ({ title, fields, note = '', validate, save, onCreated }) {
+    const m = ui.modal(
+      `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-100 overflow-visible animate-fade-in">
+        <div class="p-6 md:p-8 pb-2">
+          ${ui.modalHeader(title)}
+          ${note ? `<p class="body-normal text-dark-2 -mt-3 mb-4">${esc(note)}</p>` : ''}
+          <div class="flex flex-col gap-4" data-form>
+            ${fields
+              .map(
+                (f) => `<div class="flex flex-col gap-1.5">
+                  <label class="label-normal text-dark-1">${esc(f.label)}${f.required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
+                  <input type="${f.type || 'text'}" name="${f.name}" placeholder="${esc(f.placeholder || '')}" ${f.phone ? 'data-phone' : ''} autocomplete="off"
+                         class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
+                </div>`
+              )
+              .join('')}
+            <small data-error class="label-small text-error-primary" hidden></small>
+          </div>
+        </div>
+        <div class="p-6 md:px-8 flex justify-end gap-3 mt-2 border-t border-gray-100 rounded-b-2xl">
+          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
+          <button type="button" data-save disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Crear</button>
+        </div>
+      </div>`,
+      { z: 'z-80', overlayClass: 'bg-gray-500/30' }
+    );
+    const form = m.el.querySelector('[data-form]');
+    const btn = m.el.querySelector('[data-save]');
+    const errEl = m.el.querySelector('[data-error]');
+    ui.phoneInputs(form);
+    const values = () => {
+      const v = ui.formValues(form);
+      Object.keys(v).forEach((k) => (v[k] = String(v[k]).trim()));
+      return v;
+    };
+    const check = () => {
+      const v = values();
+      const missing = fields.some((f) => f.required && !v[f.name]);
+      const msg = missing ? '' : validate ? validate(v) : '';
+      errEl.hidden = !msg;
+      errEl.textContent = msg || '';
+      btn.disabled = missing || !!msg;
+    };
+    form.addEventListener('input', check);
+    form.addEventListener('keydown', (e) => e.key === 'Enter' && !btn.disabled && btn.click());
+    check();
+    btn.addEventListener('click', () =>
+      ui.busy(btn, async () => {
+        try {
+          const rec = await save(values());
+          m.close();
+          ui.toast('Registro creado');
+          if (onCreated) onCreated(rec);
+        } catch (err) {
+          ui.error(err, 'No se pudo crear el registro.');
+        }
+      })
+    );
+    return m;
   };
 
   /**

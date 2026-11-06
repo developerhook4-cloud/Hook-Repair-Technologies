@@ -8,8 +8,8 @@
         <div data-layout="grid" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
           {{template "input" dict "Label" "Nombre" "Name" "name" "Placeholder" "Nombre" "Required" true}}
           {{template "input" dict "Label" "Email" "Name" "email" "Type" "email" "Placeholder" "ejemplo@ejemplo.com" "Required" true}}
-          {{template "input" dict "Label" "Teléfono" "Name" "phone" "Placeholder" "+52 662 123 4567"}}
-          {{template "input" dict "Label" "Celular" "Name" "phone2" "Placeholder" "+52 662 123 4567"}}
+          {{template "input" dict "Label" "Teléfono" "Name" "phone" "Placeholder" "662 123 4567" "Phone" true}}
+          {{template "input" dict "Label" "Celular" "Name" "phone2" "Placeholder" "662 123 4567" "Phone" true}}
           <div data-layout="half" class="md:col-span-2 md:w-[calc(50%-0.75rem)]">
             {{template "input" dict "Label" "Página web" "Name" "website" "Placeholder" "https://www.ejemplo.com"}}
           </div>

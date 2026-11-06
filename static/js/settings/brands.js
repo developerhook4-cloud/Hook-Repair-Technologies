@@ -81,7 +81,7 @@
       message: '¿Está seguro de que desea eliminar la marca',
       name: brand.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${brand.id}/status`, { active: false });
+        await Hook.del(`${endpoint}/${brand.id}`);
         state.rows = state.rows.filter((r) => r.id !== brand.id);
         state.refresh();
         ui.toast('Cambios guardados');

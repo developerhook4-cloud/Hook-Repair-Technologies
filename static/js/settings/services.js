@@ -30,7 +30,7 @@
       { key: 'publicPrice', label: 'Precio Público', width: 140, sort: 'publicPrice', cellClass: 'font-bold text-dark-2', render: (s) => ui.money(s.publicPrice), text: (s) => ui.money(s.publicPrice) },
       { key: 'distributorPrice', label: 'Precio Distribuidor', width: 160, sort: 'distributorPrice', render: (s) => ui.money(s.distributorPrice), text: (s) => ui.money(s.distributorPrice) },
     ],
-    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar') + ui.actionBtn('more', 'ellipsis', 'Más'),
+    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar'),
     onAction: (action, s) => (action === 'edit' ? openModal(s) : action === 'delete' ? openDelete(s) : null),
   });
 
@@ -164,7 +164,7 @@
       message: '¿Está seguro de que desea eliminar el servicio',
       name: service.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${service.id}/status`, { active: false });
+        await Hook.del(`${endpoint}/${service.id}`);
         state.rows = state.rows.filter((r) => r.id !== service.id);
         state.refresh();
         ui.toast('Cambios guardados');

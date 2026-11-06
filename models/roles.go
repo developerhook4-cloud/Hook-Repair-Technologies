@@ -49,6 +49,9 @@ func (r *SaveRoleRequest) normalize() error {
 	if len(invalid) > 0 {
 		return Invalid("Los siguientes permisos no son válidos: %s", strings.Join(invalid, ", "))
 	}
+	if len(clean) == 0 {
+		return Invalid("Selecciona al menos un permiso para el rol.")
+	}
 	r.Permissions = clean
 	return nil
 }
@@ -67,7 +70,7 @@ func scanRole(sc interface{ Scan(...any) error }) (*Role, error) {
 
 // GetRoles — roles de la organización, por nombre.
 func GetRoles(orgID string) ([]Role, error) {
-	rows, err := db.DB.Query(roleSelect+` WHERE organization_id = ? ORDER BY name`, orgID)
+	rows, err := db.DB.Query(roleSelect+` WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +88,7 @@ func GetRoles(orgID string) ([]Role, error) {
 
 // GetRole por id dentro de la organización.
 func GetRole(orgID, roleID string) (*Role, error) {
-	r, err := scanRole(db.DB.QueryRow(roleSelect+` WHERE organization_id = ? AND id = ?`, orgID, roleID))
+	r, err := scanRole(db.DB.QueryRow(roleSelect+` WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, roleID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -95,7 +98,7 @@ func GetRole(orgID, roleID string) (*Role, error) {
 func roleNameTaken(orgID, name, exceptID string) (bool, error) {
 	var exists bool
 	err := db.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM roles
-		WHERE organization_id = ? AND UPPER(name) = UPPER(?) AND (? = '' OR id <> ?))`,
+		WHERE organization_id = ? AND UPPER(name) = UPPER(?) AND deleted_at IS NULL AND (? = '' OR id <> ?))`,
 		orgID, name, exceptID, exceptID).Scan(&exists)
 	return exists, err
 }
@@ -132,6 +135,11 @@ func UpdateRole(orgID, roleID string, r SaveRoleRequest) (*Role, error) {
 	if err != nil {
 		return nil, err
 	}
+	if !IsAdminRole(r.Permissions) {
+		if err := ensureAdminRemains(orgID, "", roleID); err != nil {
+			return nil, err
+		}
+	}
 	if taken {
 		return nil, Conflict("Un rol con el mismo nombre ya existe en la organización.")
 	}
@@ -144,13 +152,18 @@ func UpdateRole(orgID, roleID string, r SaveRoleRequest) (*Role, error) {
 
 // SetRoleStatus activa o desactiva un rol.
 func SetRoleStatus(orgID, roleID string, active bool) error {
+	if !active {
+		if err := ensureAdminRemains(orgID, "", roleID); err != nil {
+			return err
+		}
+	}
 	_, err := db.DB.Exec(`UPDATE roles SET active=? WHERE organization_id=? AND id=?`, active, orgID, roleID)
 	return err
 }
 
 // FindRoleByName busca un rol de la organización por nombre (sin distinguir mayúsculas).
 func FindRoleByName(orgID, name string) (*Role, error) {
-	r, err := scanRole(db.DB.QueryRow(roleSelect+` WHERE organization_id = ? AND LOWER(name) = LOWER(?) LIMIT 1`, orgID, name))
+	r, err := scanRole(db.DB.QueryRow(roleSelect+` WHERE organization_id = ? AND LOWER(name) = LOWER(?) AND deleted_at IS NULL LIMIT 1`, orgID, name))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

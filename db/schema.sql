@@ -7,6 +7,10 @@
 --
 -- Todos los ids son BIGINT AUTO_INCREMENT. Cada registro de catálogos,
 -- terceros e inventario lleva organization_id (cada taller ve solo lo suyo).
+--
+-- deleted_at: "Eliminar" no borra la fila (se conserva por historial), solo
+-- la marca y deja de mostrarse. Las columnas *_live valen NULL en lo eliminado,
+-- así los UNIQUE permiten volver a usar el nombre o el email.
 -- ─────────────────────────────────────────────────────────────────────
 
 -- ── Organizaciones, roles y usuarios ────────────────────────────────
@@ -34,6 +38,7 @@ CREATE TABLE IF NOT EXISTS roles (
   name            VARCHAR(100) NOT NULL,
   permissions     JSON         NOT NULL,
   active          TINYINT(1)   NOT NULL DEFAULT 1,
+  deleted_at      DATETIME     NULL,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_roles_org (organization_id),
   CONSTRAINT fk_roles_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
@@ -48,7 +53,9 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash   VARCHAR(255) NOT NULL,
   active          TINYINT(1)   NOT NULL DEFAULT 1,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_users_email (email),
+  deleted_at      DATETIME     NULL,
+  email_live      VARCHAR(255) GENERATED ALWAYS AS (IF(deleted_at IS NULL, email, NULL)) STORED,
+  UNIQUE KEY uq_users_email (email_live),
   KEY idx_users_org (organization_id),
   CONSTRAINT fk_users_org  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE,
   CONSTRAINT fk_users_role FOREIGN KEY (role_id) REFERENCES roles(id)
@@ -63,7 +70,9 @@ CREATE TABLE IF NOT EXISTS categories (
   name            VARCHAR(150) NOT NULL,
   icon            VARCHAR(100) NOT NULL DEFAULT '',
   active          TINYINT(1)   NOT NULL DEFAULT 1,
-  UNIQUE KEY uq_categories_name (organization_id, name)
+  deleted_at      DATETIME     NULL,
+  name_live       VARCHAR(150) GENERATED ALWAYS AS (IF(deleted_at IS NULL, name, NULL)) STORED,
+  UNIQUE KEY uq_categories_name (organization_id, name_live)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS brands (
@@ -71,7 +80,9 @@ CREATE TABLE IF NOT EXISTS brands (
   organization_id BIGINT       NOT NULL,
   name            VARCHAR(150) NOT NULL,
   active          TINYINT(1)   NOT NULL DEFAULT 1,
-  UNIQUE KEY uq_brands_name (organization_id, name)
+  deleted_at      DATETIME     NULL,
+  name_live       VARCHAR(150) GENERATED ALWAYS AS (IF(deleted_at IS NULL, name, NULL)) STORED,
+  UNIQUE KEY uq_brands_name (organization_id, name_live)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Modelos de dispositivo (iPhone 13, Galaxy S22…)
@@ -81,7 +92,9 @@ CREATE TABLE IF NOT EXISTS device_models (
   brand_id        BIGINT       NOT NULL,
   name            VARCHAR(150) NOT NULL,
   active          TINYINT(1)   NOT NULL DEFAULT 1,
-  UNIQUE KEY uq_device_models_name (organization_id, brand_id, name),
+  deleted_at      DATETIME     NULL,
+  name_live       VARCHAR(150) GENERATED ALWAYS AS (IF(deleted_at IS NULL, name, NULL)) STORED,
+  UNIQUE KEY uq_device_models_name (organization_id, brand_id, name_live),
   CONSTRAINT fk_device_models_brand FOREIGN KEY (brand_id) REFERENCES brands(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -98,6 +111,7 @@ CREATE TABLE IF NOT EXISTS repair_services (
   public_price      DECIMAL(18,2) NOT NULL DEFAULT 0,
   distributor_price DECIMAL(18,2) NOT NULL DEFAULT 0,
   active            TINYINT(1)    NOT NULL DEFAULT 1,
+  deleted_at        DATETIME      NULL,
   KEY idx_repair_services_org (organization_id),
   CONSTRAINT fk_repair_services_category FOREIGN KEY (category_id) REFERENCES categories(id),
   CONSTRAINT fk_repair_services_brand    FOREIGN KEY (brand_id)    REFERENCES brands(id),
@@ -129,6 +143,7 @@ CREATE TABLE IF NOT EXISTS customers (
   expense_type      VARCHAR(200) NULL,
   active            TINYINT(1)   NOT NULL DEFAULT 1,
   created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at        DATETIME     NULL,
   KEY idx_customers_org (organization_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -141,6 +156,7 @@ CREATE TABLE IF NOT EXISTS suppliers (
   email           VARCHAR(254) NOT NULL,
   active          TINYINT(1)   NOT NULL DEFAULT 1,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at      DATETIME     NULL,
   KEY idx_suppliers_org (organization_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -167,6 +183,7 @@ CREATE TABLE IF NOT EXISTS products (
   is_serialized          TINYINT(1)    NOT NULL DEFAULT 0,
   active                 TINYINT(1)    NOT NULL DEFAULT 1,
   created_at             DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at             DATETIME      NULL,
   UNIQUE KEY uq_products_upc (upc),
   KEY idx_products_org (organization_id),
   CONSTRAINT fk_products_category FOREIGN KEY (category_id) REFERENCES categories(id),

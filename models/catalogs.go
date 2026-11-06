@@ -34,7 +34,7 @@ func validCatalogName(name string) (string, error) {
 
 // GetCategories — todas las de la organización.
 func GetCategories(orgID string) ([]Category, error) {
-	rows, err := db.DB.Query(`SELECT id, name, icon, active FROM categories WHERE organization_id = ? ORDER BY name`, orgID)
+	rows, err := db.DB.Query(`SELECT id, name, icon, active FROM categories WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func GetCategories(orgID string) ([]Category, error) {
 // GetCategory por id.
 func GetCategory(orgID, id string) (*Category, error) {
 	var c Category
-	err := db.DB.QueryRow(`SELECT id, name, icon, active FROM categories WHERE organization_id = ? AND id = ?`, orgID, id).
+	err := db.DB.QueryRow(`SELECT id, name, icon, active FROM categories WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, id).
 		Scan(&c.ID, &c.Name, &c.Icon, &c.Active)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -84,7 +84,7 @@ func UpdateCategory(orgID, id string, r CategoryRequest) (*Category, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := db.DB.Exec(`UPDATE categories SET name=?, icon=? WHERE organization_id=? AND id=?`,
+	res, err := db.DB.Exec(`UPDATE categories SET name=?, icon=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`,
 		name, strings.TrimSpace(r.Icon), orgID, id)
 	if err != nil {
 		if IsUniqueViolation(err) {
@@ -114,7 +114,7 @@ type BrandRequest struct {
 
 // GetBrands — todas las de la organización.
 func GetBrands(orgID string) ([]Brand, error) {
-	rows, err := db.DB.Query(`SELECT id, name, active FROM brands WHERE organization_id = ? ORDER BY name`, orgID)
+	rows, err := db.DB.Query(`SELECT id, name, active FROM brands WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func GetBrands(orgID string) ([]Brand, error) {
 // GetBrand por id.
 func GetBrand(orgID, id string) (*Brand, error) {
 	var b Brand
-	err := db.DB.QueryRow(`SELECT id, name, active FROM brands WHERE organization_id = ? AND id = ?`, orgID, id).
+	err := db.DB.QueryRow(`SELECT id, name, active FROM brands WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, id).
 		Scan(&b.ID, &b.Name, &b.Active)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -163,7 +163,7 @@ func UpdateBrand(orgID, id string, r BrandRequest) (*Brand, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := db.DB.Exec(`UPDATE brands SET name=? WHERE organization_id=? AND id=?`, name, orgID, id)
+	res, err := db.DB.Exec(`UPDATE brands SET name=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`, name, orgID, id)
 	if err != nil {
 		if IsUniqueViolation(err) {
 			return nil, Conflict("La marca ya existe.")
@@ -198,7 +198,7 @@ const modelSelect = `SELECT m.id, m.brand_id, COALESCE(b.name, ''), m.name, m.ac
 
 // GetDeviceModels — todos los de la organización.
 func GetDeviceModels(orgID string) ([]DeviceModel, error) {
-	rows, err := db.DB.Query(modelSelect+` WHERE m.organization_id = ? ORDER BY m.name`, orgID)
+	rows, err := db.DB.Query(modelSelect+` WHERE m.organization_id = ? AND m.deleted_at IS NULL ORDER BY m.name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +217,7 @@ func GetDeviceModels(orgID string) ([]DeviceModel, error) {
 // GetDeviceModel por id.
 func GetDeviceModel(orgID, id string) (*DeviceModel, error) {
 	var m DeviceModel
-	err := db.DB.QueryRow(modelSelect+` WHERE m.organization_id = ? AND m.id = ?`, orgID, id).
+	err := db.DB.QueryRow(modelSelect+` WHERE m.organization_id = ? AND m.id = ? AND m.deleted_at IS NULL`, orgID, id).
 		Scan(&m.ID, &m.BrandID, &m.BrandName, &m.Name, &m.Active)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -262,7 +262,7 @@ func UpdateDeviceModel(orgID, id string, r ModelRequest) (*DeviceModel, error) {
 	if err != nil {
 		return nil, err
 	}
-	res, err := db.DB.Exec(`UPDATE device_models SET name=?, brand_id=? WHERE organization_id=? AND id=?`, name, r.BrandID, orgID, id)
+	res, err := db.DB.Exec(`UPDATE device_models SET name=?, brand_id=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`, name, r.BrandID, orgID, id)
 	if err != nil {
 		if IsUniqueViolation(err) {
 			return nil, Conflict("El modelo ya existe para esta marca.")
@@ -294,7 +294,7 @@ func SetCatalogStatus(kind, orgID, id string, active bool) error {
 	if !ok {
 		return errors.New("catálogo desconocido: " + kind)
 	}
-	res, err := db.DB.Exec(`UPDATE `+table+` SET active=? WHERE organization_id=? AND id=?`, active, orgID, id)
+	res, err := db.DB.Exec(`UPDATE `+table+` SET active=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`, active, orgID, id)
 	if err != nil {
 		return err
 	}

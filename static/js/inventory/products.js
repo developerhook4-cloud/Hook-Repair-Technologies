@@ -47,7 +47,7 @@
   const actions = (p) =>
     (canEdit ? ui.actionBtn('edit', 'pen', 'Editar') : '') +
     (canDelete ? ui.actionBtn('delete', 'trash-can', 'Eliminar') : '') +
-    ui.actionBtn('details', 'ellipsis', 'Ver detalles');
+    ui.actionBtn('details', 'eye', 'Ver detalles');
 
   const table = ui.table(document.getElementById('table'), {
     state,
@@ -114,11 +114,16 @@
         <input type="number" name="${name}" value="${esc(value)}" step="any" min="0" ${extra}
                class="w-full border border-gray-300 rounded-[14px] px-4 py-2 focus:outline-none focus:border-brand-primary body-normal text-dark-1 disabled:bg-gray-50 disabled:text-gray-400" />
       </div>`;
-    const ddf = (label, id, required) => `
+    const ddf = (label, id, required, quick) => `
       <div class="flex flex-col gap-1.5">
-        <label class="label-normal font-semibold text-dark-1">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
+        <div class="flex items-center gap-2">
+          <label class="label-normal font-semibold text-dark-1">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
+          ${quick ? ui.quickAddBtn(quick[0], quick[1]) : ''}
+        </div>
         <div id="${id}"></div>
       </div>`;
+    const canCatalogs = Hook.can('Catalogs.Update');
+    const canSuppliers = Hook.can('Suppliers.Update');
 
     const m = ui.modal(`
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col max-h-[90vh] border border-gray-100 overflow-hidden animate-fade-in">
@@ -135,14 +140,14 @@
                 <input type="text" name="name" maxlength="250" value="${esc(p.name || '')}" placeholder="Ej. Pantalla OLED iPhone 13"
                        class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
               </div>
-              <div class="grid grid-cols-2 gap-4">${ddf('Categoría', 'ddCat', true)}${ddf('Marca', 'ddBrand', true)}</div>
-              <div class="grid grid-cols-2 gap-4">${ddf('Dispositivo asociado', 'ddModel')}${ddf('Condición', 'ddCond')}</div>
+              <div class="grid grid-cols-2 gap-4">${ddf('Categoría', 'ddCat', true, canCatalogs && ['category', 'Nueva'])}${ddf('Marca', 'ddBrand', true, canCatalogs && ['brand', 'Nueva'])}</div>
+              <div class="grid grid-cols-2 gap-4">${ddf('Dispositivo asociado', 'ddModel', false, canCatalogs && ['model', 'Nuevo'])}${ddf('Condición', 'ddCond')}</div>
               <div class="flex flex-col gap-1.5">
                 <label class="label-normal font-semibold text-dark-1">Modelos compatibles</label>
                 <div data-compatible class="flex flex-wrap gap-2 min-h-11 border border-gray-300 rounded-[14px] px-3 py-2"></div>
               </div>
               <div class="grid grid-cols-2 gap-4">
-                ${ddf('Proveedor', 'ddSupplier')}
+                ${ddf('Proveedor', 'ddSupplier', false, canSuppliers && ['supplier', 'Nuevo'])}
                 <div class="flex flex-col gap-1.5">
                   <label class="label-normal font-semibold text-dark-1">UPC</label>
                   <input type="text" value="${esc(p.upc || '')}" placeholder="Se genera al guardar" readonly
@@ -212,7 +217,7 @@
       paintCompatible();
     });
 
-    ui.dropdown(m.el.querySelector('#ddCat'), { items: items(categories), value: cur.categoryId, onChange: (v) => ((cur.categoryId = v), sync()) });
+    const ddCat = ui.dropdown(m.el.querySelector('#ddCat'), { items: items(categories), value: cur.categoryId, onChange: (v) => ((cur.categoryId = v), sync()) });
     const ddModel = ui.dropdown(m.el.querySelector('#ddModel'), {
       items: items(brandModels()),
       value: cur.modelId,
@@ -223,7 +228,7 @@
         paintCompatible();
       },
     });
-    ui.dropdown(m.el.querySelector('#ddBrand'), {
+    const ddBrand = ui.dropdown(m.el.querySelector('#ddBrand'), {
       items: items(brands),
       value: cur.brandId,
       onChange: (v) => {
@@ -237,8 +242,74 @@
       },
     });
     ui.dropdown(m.el.querySelector('#ddCond'), { items: CONDITIONS.map((c) => ({ value: c, label: c })), value: cur.condition, none: 'Sin especificar', onChange: (v) => (cur.condition = v) });
-    ui.dropdown(m.el.querySelector('#ddSupplier'), { items: items(suppliers), value: cur.supplierId, none: 'Ninguno', up: true, onChange: (v) => (cur.supplierId = v) });
+    const ddSupplier = ui.dropdown(m.el.querySelector('#ddSupplier'), { items: items(suppliers), value: cur.supplierId, none: 'Ninguno', up: true, onChange: (v) => (cur.supplierId = v) });
     paintCompatible();
+
+    // Alta rápida de categoría, marca, modelo y proveedor sin salir del formulario
+    m.el.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-quick-add]');
+      if (!b) return;
+      const kind = b.dataset.quickAdd;
+      if (kind === 'category') {
+        ui.quickAdd({
+          title: 'Nueva categoría',
+          fields: [{ name: 'name', label: 'Nombre', placeholder: 'Ej. Pantallas', required: true }],
+          save: async (v) => ({ id: (await Hook.post(Hook.org('categories'), { name: v.name, icon: '' })).id, name: v.name, active: true }),
+          onCreated: (rec) => {
+            categories.push(rec);
+            ddCat.setItems(items(categories));
+            ddCat.setValue(rec.id, false);
+          },
+        });
+      } else if (kind === 'brand') {
+        ui.quickAdd({
+          title: 'Nueva marca',
+          fields: [{ name: 'name', label: 'Nombre', placeholder: 'Ej. Apple', required: true }],
+          save: async (v) => ({ id: (await Hook.post(Hook.org('brands'), { name: v.name })).id, name: v.name, active: true }),
+          onCreated: (rec) => {
+            brands.push(rec);
+            ddBrand.setItems(items(brands));
+            ddBrand.setValue(rec.id, false);
+          },
+        });
+      } else if (kind === 'model') {
+        const brand = brands.find((x) => x.id === cur.brandId);
+        if (!brand) return ui.toast('Primero selecciona la marca del dispositivo.', 'error');
+        ui.quickAdd({
+          title: 'Nuevo dispositivo',
+          note: `Marca: ${brand.name}`,
+          fields: [{ name: 'name', label: 'Modelo', placeholder: 'Ej. iPhone 16', required: true }],
+          save: async (v) => ({
+            id: (await Hook.post(Hook.org('models'), { name: v.name, brandId: brand.id })).id,
+            name: v.name,
+            brandId: brand.id,
+            brandName: brand.name,
+            active: true,
+          }),
+          onCreated: (rec) => {
+            models.push(rec);
+            ddModel.setItems(items(brandModels()));
+            ddModel.setValue(rec.id, false);
+          },
+        });
+      } else if (kind === 'supplier') {
+        ui.quickAdd({
+          title: 'Nuevo proveedor',
+          fields: [
+            { name: 'name', label: 'Nombre', placeholder: 'Ej. Tech Source', required: true },
+            { name: 'phone1', label: 'Teléfono', placeholder: '662 481 9204', required: true, phone: true },
+            { name: 'email', label: 'Email', type: 'email', placeholder: 'ejemplo@proveedor.com', required: true },
+          ],
+          validate: (v) => (!ui.isPhone(v.phone1) ? 'El teléfono solo puede tener números (máximo 15 dígitos).' : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email) ? 'El email no es válido.' : ''),
+          save: async (v) => ({ id: (await Hook.post(Hook.org('suppliers'), v)).id, name: v.name, active: true }),
+          onCreated: (rec) => {
+            suppliers.push(rec);
+            ddSupplier.setItems(items(suppliers));
+            ddSupplier.setValue(rec.id, false);
+          },
+        });
+      }
+    });
 
     // IMEI / series: un campo por cada pieza del stock inicial
     function paintSerials() {
@@ -407,7 +478,7 @@
       message: '¿Está seguro de que desea eliminar el producto',
       name: p.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${p.id}/status`, { active: false });
+        await Hook.del(`${endpoint}/${p.id}`);
         state.rows = state.rows.filter((r) => r.id !== p.id);
         state.refresh();
         ui.toast('Cambios guardados');

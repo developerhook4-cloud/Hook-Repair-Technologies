@@ -37,7 +37,7 @@
       { key: 'currentStock', label: 'Nueva cantidad', width: 150, sort: 'currentStock' },
       { key: 'createdAtUtc', label: 'Fecha', width: 190, sort: 'date', render: (m) => esc(ui.dateTime(m.createdAtUtc)), text: (m) => ui.dateTime(m.createdAtUtc) },
     ],
-    actions: () => ui.actionBtn('details', 'ellipsis', 'Ver detalles'),
+    actions: () => ui.actionBtn('details', 'eye', 'Ver detalles'),
     onAction: (_, m) => openDetails(m),
   });
 
@@ -111,8 +111,18 @@
 
     ui.dropdown(m.el.querySelector('#ddProduct'), {
       items: products.map((p) => ({ value: p.id, label: `${p.name} (${p.inStock})` })),
+      placeholder: products.length ? 'Seleccionar producto' : 'No hay productos',
       onChange: (v) => ((cur.productId = v), sync()),
     });
+    if (!products.length) {
+      form.insertAdjacentHTML(
+        'afterbegin',
+        `<div class="md:col-span-2 flex items-center gap-3 bg-warning-subtle text-warning-darker rounded-[14px] px-4 py-3 body-normal">
+           ${ui.icon('circle-info')}
+           <span>Todavía no hay productos. Crea uno en <a href="/inventory/products" class="font-bold underline">Inventario → Productos</a> para poder registrar movimientos.</span>
+         </div>`
+      );
+    }
     ui.dropdown(m.el.querySelector('#ddType'), { items: TYPES, onChange: (v) => ((cur.type = v), sync()) });
     qty.addEventListener('input', sync);
 

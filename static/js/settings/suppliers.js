@@ -17,14 +17,14 @@
     state,
     emptyText: 'No se encontraron proveedores.',
     columns: [
-      { key: 'id', label: 'ID', width: 80, sort: 'id', render: (s) => esc(s.id.slice(0, 8)), title: (s) => s.id },
+      { key: 'id', label: 'ID', width: 80, sort: 'id', render: (s) => esc(s.id), title: (s) => s.id },
       { key: 'name', label: 'Nombre', width: 220, sort: 'name', title: (s) => s.name },
       { key: 'phone1', label: 'Teléfono', width: 160 },
       { key: 'phone2', label: 'Teléfono Alternativo', width: 180, render: (s) => esc(s.phone2 || '') },
       { key: 'email', label: 'Email', width: 240, sort: 'email', title: (s) => s.email },
       { key: 'active', label: 'Estado', width: 120, render: (s) => ui.statusPill(s.active), text: (s) => (s.active ? 'Activo' : 'Inactivo') },
     ],
-    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar') + ui.actionBtn('more', 'ellipsis', 'Más'),
+    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar'),
     onAction: (action, s) => (action === 'edit' ? openModal(s) : action === 'delete' ? openDelete(s) : null),
   });
 
@@ -51,8 +51,8 @@
           ${ui.modalHeader(editing ? 'Editar proveedor' : 'Nuevo proveedor')}
           <div class="flex flex-col gap-5" data-form>
             ${ui.field({ label: 'Nombre', name: 'name', value: s.name, placeholder: 'Ej. Tech Source', required: true })}
-            ${ui.field({ label: 'Teléfono', name: 'phone1', value: s.phone1, placeholder: '+52 662 481 9204', required: true })}
-            ${ui.field({ label: 'Teléfono Alternativo', name: 'phone2', value: s.phone2, placeholder: '+52 662 739 1058' })}
+            ${ui.field({ label: 'Teléfono', name: 'phone1', value: s.phone1, placeholder: '662 481 9204', required: true, phone: true })}
+            ${ui.field({ label: 'Teléfono Alternativo', name: 'phone2', value: s.phone2, placeholder: '662 739 1058', phone: true })}
             ${ui.field({ label: 'Email', name: 'email', type: 'email', value: s.email, placeholder: 'ejemplo@proveedor.com', required: true })}
             ${editing ? ui.ddField({ label: 'Estado', id: 'ddStatus' }) : ''}
           </div>
@@ -75,12 +75,18 @@
         onChange: (v) => (active = v === 'true'),
       });
     }
-    const valid = () => {
-      const f = ui.formValues(form);
-      return f.name.trim() !== '' && f.phone1.trim() !== '' && emailRe.test(f.email.trim());
-    };
-    form.addEventListener('input', () => (save.disabled = !valid()));
-    save.disabled = !valid();
+    ui.phoneInputs(form);
+    const v = ui.validator(
+      form,
+      {
+        name: [ui.rules.required],
+        phone1: [ui.rules.required, ui.rules.phone],
+        phone2: [ui.rules.phone],
+        email: [ui.rules.required, [(x) => emailRe.test(x), 'El formato debe ser válido.']],
+      },
+      (ok) => (save.disabled = !ok)
+    );
+    v.validate();
 
     save.addEventListener('click', () =>
       ui.busy(save, async () => {
@@ -109,8 +115,8 @@
       message: '¿Está seguro de que desea eliminar el proveedor',
       name: supplier.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${supplier.id}/status`, { active: false });
-        ui.toast('Cambios guardados');
+        await Hook.del(`${endpoint}/${supplier.id}`);
+        ui.toast('Proveedor eliminado');
         load();
       },
     });

@@ -3,6 +3,7 @@ package models
 import (
 	"database/sql"
 	"errors"
+	"log"
 	"strings"
 
 	"hook-repair/db"
@@ -17,7 +18,7 @@ type Address struct {
 	Country  string `json:"country"`
 }
 
-// Organization — fila de public.organizations.
+// Organization — fila de organizations.
 type Organization struct {
 	ID        string  `json:"id"`
 	Name      string  `json:"name"`
@@ -56,8 +57,15 @@ func (r *SaveOrganizationRequest) normalize() error {
 	if r.Email == "" || !IsEmail(r.Email) || runeLen(r.Email) > 200 {
 		return Invalid("El email es obligatorio y debe ser válido.")
 	}
-	if runeLen(r.Website) > 500 || runeLen(r.Phone1) > 30 || runeLen(r.Phone2) > 30 {
-		return Invalid("Algún campo excede la longitud permitida.")
+	r.Phone1, r.Phone2 = strings.TrimSpace(r.Phone1), strings.TrimSpace(r.Phone2)
+	if err := validPhone("teléfono", r.Phone1, false); err != nil {
+		return err
+	}
+	if err := validPhone("celular", r.Phone2, false); err != nil {
+		return err
+	}
+	if runeLen(r.Website) > 500 {
+		return Invalid("La página web no puede pasar de 500 caracteres.")
 	}
 	if r.Address == nil {
 		r.Address = &Address{}
@@ -68,7 +76,7 @@ func (r *SaveOrganizationRequest) normalize() error {
 const orgSelect = `
 	SELECT o.id, o.name, o.email, o.website, o.active, o.phone1, o.phone2,
 	       o.address, o.city, o.state, o.post_code, o.country,
-	       (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id)
+	       (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.deleted_at IS NULL)
 	FROM organizations o`
 
 func scanOrganization(sc interface{ Scan(...any) error }) (*Organization, error) {
@@ -142,7 +150,7 @@ func CreateOrganization(r SaveOrganizationRequest) (*Organization, error) {
 func registerDefaultRoles(tx *sql.Tx, orgID string) error {
 	for _, dr := range DefaultRoles {
 		var exists bool
-		if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM roles WHERE organization_id = ? AND LOWER(name) = LOWER(?))`,
+		if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM roles WHERE organization_id = ? AND LOWER(name) = LOWER(?) AND deleted_at IS NULL)`,
 			orgID, dr.Name).Scan(&exists); err != nil {
 			return err
 		}
@@ -155,6 +163,29 @@ func registerDefaultRoles(tx *sql.Tx, orgID string) error {
 		}
 	}
 	return nil
+}
+
+// EnsureDefaultRoles agrega a cada organización los roles por defecto que le
+// falten (Administrador, Gerente, Técnico, Cajero). Corre al arrancar.
+func EnsureDefaultRoles() {
+	rows, err := db.DB.Query(`SELECT id FROM organizations`)
+	if err != nil {
+		log.Printf("Roles por defecto: %v", err)
+		return
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id string
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	rows.Close()
+	for _, id := range ids {
+		if err := withTx(func(tx *sql.Tx) error { return registerDefaultRoles(tx, id) }); err != nil {
+			log.Printf("Roles por defecto (organización %s): %v", id, err)
+		}
+	}
 }
 
 // UpdateOrganization edita los datos (no el estado).

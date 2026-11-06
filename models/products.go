@@ -252,7 +252,7 @@ func fillProductDetails(list []*Product) error {
 
 // GetProducts — productos de la organización. Con onlyActive solo los activos.
 func GetProducts(orgID string, onlyActive bool) ([]Product, error) {
-	q := productSelect + ` WHERE p.organization_id = ?`
+	q := productSelect + ` WHERE p.organization_id = ? AND p.deleted_at IS NULL`
 	if onlyActive {
 		q += ` AND p.active = 1`
 	}
@@ -282,7 +282,7 @@ func GetProducts(orgID string, onlyActive bool) ([]Product, error) {
 
 // GetProduct por id.
 func GetProduct(orgID, id string) (*Product, error) {
-	p, err := scanProduct(db.DB.QueryRow(productSelect+` WHERE p.organization_id = ? AND p.id = ?`, orgID, id))
+	p, err := scanProduct(db.DB.QueryRow(productSelect+` WHERE p.organization_id = ? AND p.id = ? AND p.deleted_at IS NULL`, orgID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

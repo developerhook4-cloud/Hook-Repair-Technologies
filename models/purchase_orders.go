@@ -60,8 +60,51 @@ type PurchaseOrderProduct struct {
 
 // PurchaseOrderRequest — nueva orden.
 type PurchaseOrderRequest struct {
-	SupplierID string                 `json:"supplierId"`
-	Products   []PurchaseOrderProduct `json:"products"`
+	SupplierID    string                 `json:"supplierId"`
+	Products      []PurchaseOrderProduct `json:"products"`
+	Status        string                 `json:"status"`        // opcional: Pending (default), Waiting, InProgress
+	PaymentStatus string                 `json:"paymentStatus"` // opcional: Unpaid (default), Paid
+}
+
+// manualStatuses — estados que se eligen a mano. Recibido y Recibido
+// parcialmente los pone la recepción de mercancía.
+var manualStatuses = map[string]bool{POPending: true, POWaiting: true, POInProgress: true, POCanceled: true}
+
+var paymentStatuses = map[string]bool{PaymentUnpaid: true, PaymentPaid: true}
+
+// PurchaseOrderStatusRequest — cambiar estado y/o pago de una orden.
+type PurchaseOrderStatusRequest struct {
+	Status        string `json:"status"`
+	PaymentStatus string `json:"paymentStatus"`
+}
+
+// UpdatePurchaseOrderStatus cambia el estado de la orden y/o el del pago.
+func UpdatePurchaseOrderStatus(orgID, id string, r PurchaseOrderStatusRequest) (*PurchaseOrder, error) {
+	o, err := GetPurchaseOrder(orgID, id)
+	if err != nil {
+		return nil, err
+	}
+	status, payment := o.Status, o.PaymentStatus
+	if r.Status != "" && r.Status != o.Status {
+		if !manualStatuses[r.Status] {
+			return nil, Invalid("Ese estado no se puede elegir a mano.")
+		}
+		if o.Status == POReceived || o.Status == POReceivedPartially {
+			return nil, Invalid("La orden ya tiene mercancía recibida; su estado ya no se puede cambiar.")
+		}
+		status = r.Status
+	}
+	if r.PaymentStatus != "" {
+		if !paymentStatuses[r.PaymentStatus] {
+			return nil, Invalid("El estado del pago no es válido.")
+		}
+		payment = r.PaymentStatus
+	}
+	if _, err := db.DB.Exec(`UPDATE purchase_orders SET status = ?, payment_status = ? WHERE organization_id = ? AND id = ?`,
+		status, payment, orgID, id); err != nil {
+		return nil, err
+	}
+	return GetPurchaseOrder(orgID, id)
 }
 
 const (
@@ -70,6 +113,18 @@ const (
 )
 
 func (r *PurchaseOrderRequest) validate() error {
+	if r.Status == "" {
+		r.Status = POPending
+	}
+	if r.PaymentStatus == "" {
+		r.PaymentStatus = PaymentUnpaid
+	}
+	if r.Status != POPending && r.Status != POWaiting && r.Status != POInProgress {
+		return Invalid("Una orden nueva solo puede estar Pendiente, En espera o En progreso.")
+	}
+	if !paymentStatuses[r.PaymentStatus] {
+		return Invalid("El estado del pago no es válido.")
+	}
 	if !IsID(r.SupplierID) {
 		return Invalid("El proveedor es obligatorio.")
 	}
@@ -181,7 +236,7 @@ func GetPurchaseOrder(orgID, id string) (*PurchaseOrder, error) {
 	return o, fillPurchaseOrderLines([]*PurchaseOrder{o})
 }
 
-// CreatePurchaseOrder — toda orden nueva nace Pendiente y Sin pagar; no mueve stock.
+// CreatePurchaseOrder — crea la orden (por defecto Pendiente y Sin pagar); no mueve stock.
 // El costo unitario de cada renglón es el costo actual del producto.
 func CreatePurchaseOrder(orgID, userID string, r PurchaseOrderRequest) (*PurchaseOrder, error) {
 	if err := r.validate(); err != nil {
@@ -217,7 +272,7 @@ func CreatePurchaseOrder(orgID, userID string, r PurchaseOrderRequest) (*Purchas
 		id, err = insert(tx, `INSERT INTO purchase_orders
 			(organization_id, supplier_id, created_by, created_at, status, payment_status, total)
 			VALUES (?,?,?,?,?,?,?)`,
-			orgID, r.SupplierID, userID, time.Now().UTC(), POPending, PaymentUnpaid, math.Round(total*100)/100)
+			orgID, r.SupplierID, userID, time.Now().UTC(), r.Status, r.PaymentStatus, math.Round(total*100)/100)
 		if err != nil {
 			return err
 		}

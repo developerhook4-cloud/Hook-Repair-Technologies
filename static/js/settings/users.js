@@ -22,7 +22,7 @@
       { key: 'roleName', label: 'Rol', width: 250 },
       { key: 'active', label: 'Estado', width: 150, render: (u) => ui.statusPill(u.active), text: (u) => (u.active ? 'Activo' : 'Inactivo') },
     ],
-    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar') + ui.actionBtn('more', 'ellipsis', 'Más'),
+    actions: (u) => ui.actionBtn('edit', 'pen', 'Editar') + (Hook.user && u.id === Hook.user.id ? '' : ui.actionBtn('delete', 'trash-can', 'Eliminar')),
     onAction: (action, u) => (action === 'edit' ? openModal(u) : action === 'delete' ? openDelete(u) : null),
   });
 
@@ -59,17 +59,18 @@
           <div class="flex flex-col gap-5" data-form>
             ${plain('Nombre', 'name', u.name, 'Nombre del empleado')}
             ${plain('Email', 'email', u.email, 'email@empresa.com', 'email')}
-            ${editing ? '' : plain('Contraseña', 'password', '', 'Introduzca una contraseña', 'password')}
-            ${
-              editing
-                ? ''
-                : `<div class="flex flex-col gap-1.5">
-                     <label class="label-normal text-dark-1">Confirmar contraseña</label>
-                     <input type="password" name="confirmPassword" placeholder="Confirme la contraseña" autocomplete="new-password"
-                            class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
-                     <span data-mismatch class="label-small text-error-primary" hidden>Las contraseñas no coinciden.</span>
-                   </div>`
-            }
+            <div class="flex flex-col gap-1.5">
+              <label class="label-normal text-dark-1">${editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
+              <input type="password" name="password" placeholder="${editing ? 'Déjala vacía para no cambiarla' : 'Introduzca una contraseña'}" autocomplete="new-password"
+                     class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
+              <span data-pass-hint class="label-small text-gray-400">${ui.PASSWORD_HINT}</span>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label class="label-normal text-dark-1">Confirmar contraseña</label>
+              <input type="password" name="confirmPassword" placeholder="Confirme la contraseña" autocomplete="new-password"
+                     class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
+              <span data-mismatch class="label-small text-error-primary" hidden>Las contraseñas no coinciden.</span>
+            </div>
             ${ui.ddField({ label: 'Rol', id: 'ddRole' })}
             ${editing ? ui.ddField({ label: 'Estado', id: 'ddStatus' }) : ''}
           </div>
@@ -84,15 +85,14 @@
 
     const valid = () => {
       const f = ui.formValues(form);
-      const mismatch = !editing && f.password && f.confirmPassword && f.password !== f.confirmPassword;
-      const mm = form.querySelector('[data-mismatch]');
-      if (mm) mm.hidden = !mismatch;
-      return (
-        f.name.trim() !== '' &&
-        emailRe.test(f.email.trim()) &&
-        !!cur.roleId &&
-        (editing || (f.password && f.password === f.confirmPassword))
-      );
+      const mismatch = !!(f.password || f.confirmPassword) && f.confirmPassword !== '' && f.password !== f.confirmPassword;
+      form.querySelector('[data-mismatch]').hidden = !mismatch;
+      const passErr = f.password ? ui.passwordError(f.password) : '';
+      const hint = form.querySelector('[data-pass-hint]');
+      hint.textContent = passErr || ui.PASSWORD_HINT;
+      hint.className = `label-small ${passErr ? 'text-error-primary' : 'text-gray-400'}`;
+      const passOk = editing && !f.password ? !f.confirmPassword : !!f.password && !passErr && f.password === f.confirmPassword;
+      return f.name.trim() !== '' && emailRe.test(f.email.trim()) && !!cur.roleId && passOk;
     };
     const sync = () => (save.disabled = !valid());
 
@@ -126,6 +126,7 @@
         const payload = { name: f.name.trim(), email: f.email.trim(), roleId: cur.roleId };
         try {
           if (editing) {
+            if (f.password) payload.password = f.password;
             await Hook.put(`${endpoint}/${user.id}`, payload);
             if (cur.active !== user.active) await Hook.patch(`${endpoint}/${user.id}/status`, { active: cur.active });
           } else {
@@ -147,8 +148,8 @@
       message: '¿Está seguro de que desea eliminar al usuario',
       name: user.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${user.id}/status`, { active: false });
-        ui.toast('Cambios guardados');
+        await Hook.del(`${endpoint}/${user.id}`);
+        ui.toast('Usuario eliminado');
         load();
       },
     });

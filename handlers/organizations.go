@@ -138,9 +138,20 @@ func UpdateOrganizationUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	if _, err := models.UpdateUser(id, userID, in); err != nil {
+	u, err := models.UpdateUser(id, userID, in)
+	if err != nil {
 		respondError(c, err, "user")
 		return
+	}
+	if in.Active != nil && *in.Active != u.Active {
+		if !*in.Active && userID == currentUser(c).ID {
+			problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
+			return
+		}
+		if err := models.SetUserStatus(id, userID, *in.Active); err != nil {
+			respondError(c, err, "user")
+			return
+		}
 	}
 	c.Status(http.StatusNoContent)
 }

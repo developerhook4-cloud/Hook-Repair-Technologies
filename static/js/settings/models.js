@@ -96,7 +96,7 @@
       message: '¿Está seguro de que desea eliminar el modelo',
       name: model.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${model.id}/status`, { active: false });
+        await Hook.del(`${endpoint}/${model.id}`);
         state.rows = state.rows.filter((r) => r.id !== model.id);
         state.refresh();
         ui.toast('Cambios guardados');

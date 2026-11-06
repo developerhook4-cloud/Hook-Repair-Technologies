@@ -33,6 +33,7 @@
     {
       name: [ui.rules.required, ui.rules.pattern(nameRe)],
       email: [ui.rules.required, ui.rules.email],
+      newPassword: [ui.rules.password],
       repeatNewPassword: [[(val, all) => !all.newPassword || val === all.newPassword, 'Las contraseñas no coinciden.']],
     },
     (valid) => (submit.disabled = !valid)

@@ -1,12 +1,12 @@
 {{/* Campo con etiqueta y mensaje de error.
-   Uso: {{template "input" dict "Label" "Email" "Name" "email" "Type" "email" "Placeholder" "..." "Required" true "Password" false}}
+   Uso: {{template "input" dict "Label" "Email" "Name" "email" "Type" "email" "Placeholder" "..." "Required" true "Password" false "Phone" false}}
    El mensaje de error lo llena el JS de la página en [data-error-for]. */}}
 {{define "input"}}
 <div class="flex flex-col gap-2 w-full">
   <label for="f-{{.Name}}" class="label-normal text-dark-1">{{.Label}}{{if .Required}} <span class="text-red-500">*</span>{{end}}</label>
   <div class="relative w-full">
     <input id="f-{{.Name}}" name="{{.Name}}" type="{{if .Password}}password{{else if .Type}}{{.Type}}{{else}}text{{end}}"
-           placeholder="{{.Placeholder}}" {{if .Autocomplete}}autocomplete="{{.Autocomplete}}"{{end}}
+           placeholder="{{.Placeholder}}" {{if .Autocomplete}}autocomplete="{{.Autocomplete}}"{{end}} {{if .Phone}}data-phone{{end}}
            class="w-full bg-white border border-light-2 rounded-lg p-3 body-normal text-dark-1 outline-none focus:border-brand-primary transition-colors placeholder:text-dark-4 {{if .Password}}pr-12 tracking-widest{{end}}" />
     {{if .Password}}
     <button type="button" data-toggle-password aria-label="Mostrar contraseña"

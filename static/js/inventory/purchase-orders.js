@@ -22,6 +22,17 @@
   const statusOf = (s) => STATUS[ui.norm(s)] || [s, 'bg-gray-100 text-gray-600 border-gray-200'];
   const statusPill = (s) => `<span class="px-4 py-1.5 rounded-full label-small inline-block font-bold whitespace-nowrap border ${statusOf(s)[1]}">${esc(statusOf(s)[0])}</span>`;
   const paymentLabel = (p) => PAYMENT[ui.norm(p)] || p;
+  const PAYMENT_ITEMS = [
+    { value: 'Unpaid', label: 'Sin pagar' },
+    { value: 'Paid', label: 'Pagado' },
+  ];
+  const NEW_STATUS_ITEMS = [
+    { value: 'Pending', label: 'Pendiente' },
+    { value: 'Waiting', label: 'En espera' },
+    { value: 'InProgress', label: 'En progreso' },
+  ];
+  // Estados que se pueden elegir a mano en una orden existente
+  const MANUAL_STATUS_ITEMS = NEW_STATUS_ITEMS.concat([{ value: 'Canceled', label: 'Cancelado' }]);
 
   let products = [];
   let suppliers = [];
@@ -45,7 +56,7 @@
       { key: 'status', label: 'Estado de la orden', width: 200, render: (o) => statusPill(o.status), text: (o) => statusOf(o.status)[0] },
       { key: 'total', label: 'Total', width: 140, sort: 'total', render: (o) => ui.money(o.total), text: (o) => ui.money(o.total) },
     ],
-    actions: () => ui.actionBtn('details', 'ellipsis', 'Ver detalles'),
+    actions: () => ui.actionBtn('details', 'eye', 'Ver detalles'),
     onAction: (_, o) => openDetails(o),
   });
 
@@ -67,7 +78,7 @@
 
   // ── Crear orden ─────────────────────────────────────────────────────
   function openCreate() {
-    const order = { supplierId: null, lines: [] };
+    const order = { supplierId: null, lines: [], status: 'Pending', paymentStatus: 'Unpaid' };
     const today = new Date().toLocaleDateString('en-CA');
     const m = ui.modal(`
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] border border-gray-100 overflow-hidden animate-fade-in">
@@ -79,16 +90,22 @@
           <div class="flex flex-col lg:flex-row gap-10">
             <div class="lg:w-[34%] flex flex-col gap-5">
               <h3 class="label-normal font-bold text-dark-1">Datos Generales</h3>
-              ${ui.ddField({ label: 'Proveedor', id: 'ddSupplier', required: true })}
+              <div class="flex flex-col gap-1.5">
+                <div class="flex items-center gap-2">
+                  <label class="label-normal text-dark-1">Proveedor <span class="text-brand-primary">*</span></label>
+                  ${Hook.can('Suppliers.Update') ? ui.quickAddBtn('supplier', 'Nuevo') : ''}
+                </div>
+                <div id="ddSupplier"></div>
+              </div>
               <div class="grid grid-cols-2 gap-4">
                 ${ui.field({ label: 'Fecha', name: 'date', type: 'date', value: today, readonly: true })}
                 ${ui.field({ label: 'Usuario', name: 'user', value: (Hook.user && Hook.user.name) || '', readonly: true })}
               </div>
               <div class="grid grid-cols-2 gap-4">
-                ${ui.field({ label: 'Estado pago', name: 'pay', value: 'Sin pagar', readonly: true })}
-                ${ui.field({ label: 'Estado orden', name: 'st', value: 'Pendiente', readonly: true })}
+                ${ui.ddField({ label: 'Estado pago', id: 'ddPay' })}
+                ${ui.ddField({ label: 'Estado orden', id: 'ddStatus' })}
               </div>
-              <p class="label-small text-gray-400">Toda orden nueva nace Pendiente y Sin pagar. El costo de cada producto es su costo actual.</p>
+              <p class="label-small text-gray-400">El costo de cada producto es su costo actual. "Recibido" se marca solo al recibir la mercancía.</p>
             </div>
             <div class="flex-1 flex flex-col gap-4 lg:border-l border-gray-100 lg:pl-10">
               <div class="flex items-center justify-between">
@@ -199,10 +216,31 @@
       sync();
     });
 
-    ui.dropdown(m.el.querySelector('#ddSupplier'), {
+    const ddSupplier = ui.dropdown(m.el.querySelector('#ddSupplier'), {
       items: suppliers.map((s) => ({ value: s.id, label: s.name })),
-      placeholder: 'Seleccionar proveedor',
+      placeholder: suppliers.length ? 'Seleccionar proveedor' : 'No hay proveedores, crea uno',
       onChange: (v) => ((order.supplierId = v), sync()),
+    });
+    ui.dropdown(m.el.querySelector('#ddPay'), { items: PAYMENT_ITEMS, value: order.paymentStatus, onChange: (v) => (order.paymentStatus = v || 'Unpaid') });
+    ui.dropdown(m.el.querySelector('#ddStatus'), { items: NEW_STATUS_ITEMS, value: order.status, onChange: (v) => (order.status = v || 'Pending') });
+    m.el.addEventListener('click', (e) => {
+      if (!e.target.closest('[data-quick-add="supplier"]')) return;
+      ui.quickAdd({
+        title: 'Nuevo proveedor',
+        fields: [
+          { name: 'name', label: 'Nombre', placeholder: 'Ej. Tech Source', required: true },
+          { name: 'phone1', label: 'Teléfono', placeholder: '662 481 9204', required: true, phone: true },
+          { name: 'email', label: 'Email', type: 'email', placeholder: 'ejemplo@proveedor.com', required: true },
+        ],
+        validate: (v) => (!ui.isPhone(v.phone1) ? 'El teléfono solo puede tener números (máximo 15 dígitos).' : !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.email) ? 'El email no es válido.' : ''),
+        save: async (v) => ({ id: (await Hook.post(Hook.org('suppliers'), v)).id, name: v.name, active: true }),
+        onCreated: (rec) => {
+          suppliers.push(rec);
+          ddSupplier.setItems(suppliers.map((s) => ({ value: s.id, label: s.name })));
+          ddSupplier.setPlaceholder('Seleccionar proveedor');
+          ddSupplier.setValue(rec.id, false);
+        },
+      });
     });
     addLine();
 
@@ -211,6 +249,8 @@
         try {
           await Hook.post(endpoint, {
             supplierId: order.supplierId,
+            status: order.status,
+            paymentStatus: order.paymentStatus,
             products: order.lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
           });
           m.close();
@@ -246,6 +286,15 @@
             <span class="text-gray-300">|</span>
             ${statusPill(order.status)}
           </div>
+          ${
+            canEdit
+              ? `<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end mb-8 bg-gray-50 border border-gray-100 rounded-2xl p-4">
+                   ${ui.ddField({ label: 'Estado del pago', id: 'ddEditPay' })}
+                   ${ui.ddField({ label: 'Estado de la orden', id: 'ddEditStatus' })}
+                   <button type="button" data-save-status disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Guardar estado</button>
+                 </div>`
+              : ''
+          }
           <div class="w-full">
             <div class="bg-brand-primary text-white px-6 py-3 rounded-[10px] flex label-normal font-bold mb-4">
               <div class="w-[45%]">Descripción</div><div class="w-[15%] text-center">Cantidad</div><div class="w-[20%] text-center">Precio</div><div class="w-[20%] text-right">Importe</div>
@@ -283,6 +332,31 @@
       </div>`,
       { z: 'z-70', overlayClass: 'bg-gray-500/30' }
     );
+    const saveStatus = m.el.querySelector('[data-save-status]');
+    if (saveStatus) {
+      const edit = { status: order.status, paymentStatus: order.paymentStatus };
+      const locked = ['received', 'receivedpartially', 'inrma'].includes(ui.norm(order.status));
+      const syncStatus = () => (saveStatus.disabled = edit.status === order.status && edit.paymentStatus === order.paymentStatus);
+      ui.dropdown(m.el.querySelector('#ddEditPay'), { items: PAYMENT_ITEMS, value: edit.paymentStatus, onChange: (v) => ((edit.paymentStatus = v), syncStatus()) });
+      const ddEditStatus = ui.dropdown(m.el.querySelector('#ddEditStatus'), {
+        items: locked ? [{ value: order.status, label: statusOf(order.status)[0] }] : MANUAL_STATUS_ITEMS,
+        value: edit.status,
+        onChange: (v) => ((edit.status = v), syncStatus()),
+      });
+      ddEditStatus.setDisabled(locked);
+      saveStatus.addEventListener('click', () =>
+        ui.busy(saveStatus, async () => {
+          try {
+            await Hook.patch(`${endpoint}/${order.id}`, edit);
+            m.close();
+            ui.toast('Cambios guardados');
+            load();
+          } catch (err) {
+            ui.error(err, 'No se pudo cambiar el estado.');
+          }
+        })
+      );
+    }
     const receive = m.el.querySelector('[data-receive]');
     if (receive) {
       receive.addEventListener('click', () =>

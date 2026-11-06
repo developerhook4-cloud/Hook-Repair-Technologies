@@ -114,18 +114,25 @@ func (r *ClientRequest) validate() error {
 	if name == "" || runeLen(name) > 200 {
 		return Invalid("El nombre debe tener entre 1 y 200 caracteres.")
 	}
-	phone := strVal(r.Phone1)
-	if phone == "" || runeLen(phone) > 20 {
-		return Invalid("El teléfono debe tener entre 1 y 20 caracteres.")
+	if err := validPhone("teléfono", strVal(r.Phone1), true); err != nil {
+		return err
 	}
-	if runeLen(strVal(r.Phone2)) > 20 {
-		return Invalid("El celular no puede tener más de 20 caracteres.")
+	if err := validPhone("celular", strVal(r.Phone2), false); err != nil {
+		return err
 	}
 	if e := strVal(r.Email); e != "" && (runeLen(e) > 254 || !IsEmail(e)) {
 		return Invalid("El email debe ser válido (máximo 254 caracteres).")
 	}
-	if runeLen(strVal(r.Rfc)) > 13 {
-		return Invalid("El RFC no puede tener más de 13 caracteres.")
+	// Facturación: si trae cualquiera de los datos fiscales, se piden los tres.
+	rfc := strings.ToUpper(strVal(r.Rfc))
+	if rfc != "" || strVal(r.TaxRegime) != "" || strVal(r.ExpenseType) != "" {
+		if rfc == "" || strVal(r.TaxRegime) == "" || strVal(r.ExpenseType) == "" {
+			return Invalid("Para facturar se necesitan el RFC, el régimen fiscal y el uso de CFDI.")
+		}
+		if !ValidRFC(rfc) {
+			return Invalid("El RFC no es válido: deben ser 12 caracteres (persona moral) o 13 (persona física), con el formato del SAT.")
+		}
+		r.Rfc = &rfc
 	}
 	if a := r.Address; a != nil {
 		for _, v := range []*string{a.Address, a.City, a.State, a.PostCode, a.Country} {
@@ -185,7 +192,7 @@ func scanClient(sc interface{ Scan(...any) error }) (*Client, error) {
 
 // GetClients — todos los clientes de la organización.
 func GetClients(orgID string) ([]Client, error) {
-	rows, err := db.DB.Query(clientSelect+` WHERE organization_id = ? ORDER BY name`, orgID)
+	rows, err := db.DB.Query(clientSelect+` WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +210,7 @@ func GetClients(orgID string) ([]Client, error) {
 
 // GetClient por id.
 func GetClient(orgID, id string) (*Client, error) {
-	c, err := scanClient(db.DB.QueryRow(clientSelect+` WHERE organization_id = ? AND id = ?`, orgID, id))
+	c, err := scanClient(db.DB.QueryRow(clientSelect+` WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -250,7 +257,7 @@ func UpdateClient(orgID, id string, r ClientRequest) (*Client, error) {
 			customer_type=?, name=?, phone1=?, phone2=?, legal_name=?, email=?,
 			address=?, city=?, state=?, post_code=?, country=?,
 			titular_name=?, authorized_people=?, rfc=?, tax_regime=?, expense_type=?
-		WHERE id=? AND organization_id=?`, args...)
+		WHERE id=? AND organization_id=? AND deleted_at IS NULL`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -285,12 +292,11 @@ func (r *SupplierRequest) validate() error {
 	if name == "" || runeLen(name) > 200 {
 		return Invalid("El nombre debe tener entre 1 y 200 caracteres.")
 	}
-	phone := strVal(r.Phone1)
-	if phone == "" || runeLen(phone) > 20 {
-		return Invalid("El teléfono debe tener entre 1 y 20 caracteres.")
+	if err := validPhone("teléfono", strVal(r.Phone1), true); err != nil {
+		return err
 	}
-	if runeLen(strVal(r.Phone2)) > 20 {
-		return Invalid("El teléfono alternativo no puede tener más de 20 caracteres.")
+	if err := validPhone("teléfono alternativo", strVal(r.Phone2), false); err != nil {
+		return err
 	}
 	e := strVal(r.Email)
 	if e == "" {
@@ -316,7 +322,7 @@ func scanSupplier(sc interface{ Scan(...any) error }) (*Supplier, error) {
 
 // GetSuppliers — todos los proveedores de la organización.
 func GetSuppliers(orgID string) ([]Supplier, error) {
-	rows, err := db.DB.Query(supplierSelect+` WHERE organization_id = ? ORDER BY name`, orgID)
+	rows, err := db.DB.Query(supplierSelect+` WHERE organization_id = ? AND deleted_at IS NULL ORDER BY name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -334,7 +340,7 @@ func GetSuppliers(orgID string) ([]Supplier, error) {
 
 // GetSupplier por id.
 func GetSupplier(orgID, id string) (*Supplier, error) {
-	s, err := scanSupplier(db.DB.QueryRow(supplierSelect+` WHERE organization_id = ? AND id = ?`, orgID, id))
+	s, err := scanSupplier(db.DB.QueryRow(supplierSelect+` WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -359,7 +365,7 @@ func UpdateSupplier(orgID, id string, r SupplierRequest) (*Supplier, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
-	res, err := db.DB.Exec(`UPDATE suppliers SET name=?, phone1=?, phone2=?, email=? WHERE organization_id=? AND id=?`,
+	res, err := db.DB.Exec(`UPDATE suppliers SET name=?, phone1=?, phone2=?, email=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`,
 		strVal(r.Name), strVal(r.Phone1), trimOrNil(r.Phone2), strVal(r.Email), orgID, id)
 	if err != nil {
 		return nil, err

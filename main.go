@@ -56,6 +56,7 @@ func main() {
 	// y el super administrador inicial si todavía no existe.
 	db.EnsureSchema()
 	models.SeedRootAdmin()
+	models.EnsureDefaultRoles()
 
 	auth.InitStore()
 
@@ -150,38 +151,40 @@ func main() {
 	orgs.POST("/:id/users", h.RequirePermission(models.UpdateOrganizations), h.CreateOrganizationUser)
 	orgs.PUT("/:id/users/:userId", h.RequirePermission(models.UpdateOrganizations), h.UpdateOrganizationUser)
 	orgs.PATCH("/:id/users/:userId/status", h.RequirePermission(models.DeleteOrganizations), h.UpdateOrganizationUserStatus)
+	orgs.DELETE("/:id/users/:userId", h.RequirePermission(models.DeleteOrganizations), h.DeleteOrganizationUser)
 
 	// Todo lo de una organización: /api/:orgId/...
 	tenant := api.Group("/:orgId", h.RequireTenant())
 
-	crud := func(prefix, view, update, del string, list, get, create, edit, status gin.HandlerFunc) {
+	crud := func(prefix, view, update, del string, list, get, create, edit, status, remove gin.HandlerFunc) {
 		g := tenant.Group(prefix)
 		g.GET("", h.RequirePermission(view), list)
 		g.GET("/:id", h.RequirePermission(view), get)
 		g.POST("", h.RequirePermission(update), create)
 		g.PUT("/:id", h.RequirePermission(update), edit)
 		g.PATCH("/:id/status", h.RequirePermission(del), status)
+		g.DELETE("/:id", h.RequirePermission(del), remove)
 	}
 
 	tenant.GET("/roles/permissions", h.RequirePermission(models.ViewRoles), h.ListPermissions)
 	crud("/roles", models.ViewRoles, models.UpdateRoles, models.DeleteRoles,
-		h.ListRoles, h.GetRole, h.CreateRole, h.UpdateRole, h.UpdateRoleStatus)
+		h.ListRoles, h.GetRole, h.CreateRole, h.UpdateRole, h.UpdateRoleStatus, h.DeleteRole)
 	crud("/users", models.ViewUsers, models.UpdateUsers, models.DeleteUsers,
-		h.ListUsers, h.GetUser, h.CreateUser, h.UpdateUser, h.UpdateUserStatus)
+		h.ListUsers, h.GetUser, h.CreateUser, h.UpdateUser, h.UpdateUserStatus, h.DeleteUser)
 	crud("/categories", models.ViewCatalogs, models.UpdateCatalogs, models.DeleteCatalogs,
-		h.ListCategories, h.GetCategory, h.CreateCategory, h.UpdateCategory, h.UpdateCategoryStatus)
+		h.ListCategories, h.GetCategory, h.CreateCategory, h.UpdateCategory, h.UpdateCategoryStatus, h.DeleteCategory)
 	crud("/brands", models.ViewCatalogs, models.UpdateCatalogs, models.DeleteCatalogs,
-		h.ListBrands, h.GetBrand, h.CreateBrand, h.UpdateBrand, h.UpdateBrandStatus)
+		h.ListBrands, h.GetBrand, h.CreateBrand, h.UpdateBrand, h.UpdateBrandStatus, h.DeleteBrand)
 	crud("/models", models.ViewCatalogs, models.UpdateCatalogs, models.DeleteCatalogs,
-		h.ListModels, h.GetModel, h.CreateModel, h.UpdateModel, h.UpdateModelStatus)
+		h.ListModels, h.GetModel, h.CreateModel, h.UpdateModel, h.UpdateModelStatus, h.DeleteModel)
 	crud("/services", models.ViewServices, models.UpdateServices, models.DeleteServices,
-		h.ListServices, h.GetService, h.CreateService, h.UpdateService, h.UpdateServiceStatus)
+		h.ListServices, h.GetService, h.CreateService, h.UpdateService, h.UpdateServiceStatus, h.DeleteService)
 	crud("/clients", models.ViewCustomers, models.UpdateCustomers, models.DeleteCustomers,
-		h.ListClients, h.GetClient, h.CreateClient, h.UpdateClient, h.UpdateClientStatus)
+		h.ListClients, h.GetClient, h.CreateClient, h.UpdateClient, h.UpdateClientStatus, h.DeleteClient)
 	crud("/suppliers", models.ViewSuppliers, models.UpdateSuppliers, models.DeleteSuppliers,
-		h.ListSuppliers, h.GetSupplier, h.CreateSupplier, h.UpdateSupplier, h.UpdateSupplierStatus)
+		h.ListSuppliers, h.GetSupplier, h.CreateSupplier, h.UpdateSupplier, h.UpdateSupplierStatus, h.DeleteSupplier)
 	crud("/products", models.ViewInventory, models.UpdateInventory, models.DeleteInventory,
-		h.ListProducts, h.GetProduct, h.CreateProduct, h.UpdateProduct, h.UpdateProductStatus)
+		h.ListProducts, h.GetProduct, h.CreateProduct, h.UpdateProduct, h.UpdateProductStatus, h.DeleteProduct)
 
 	mv := tenant.Group("/inventory/movements")
 	mv.GET("", h.RequirePermission(models.ViewInventory), h.ListMovements)
@@ -192,6 +195,7 @@ func main() {
 	po.GET("", h.RequirePermission(models.ViewInventory), h.ListPurchaseOrders)
 	po.GET("/:id", h.RequirePermission(models.ViewInventory), h.GetPurchaseOrder)
 	po.POST("", h.RequirePermission(models.UpdateInventory), h.CreatePurchaseOrder)
+	po.PATCH("/:id", h.RequirePermission(models.UpdateInventory), h.UpdatePurchaseOrderStatus)
 
 	gr := tenant.Group("/goods-receipts")
 	gr.GET("", h.RequirePermission(models.ViewInventory), h.ListGoodsReceipts)

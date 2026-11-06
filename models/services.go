@@ -62,7 +62,7 @@ func scanService(sc interface{ Scan(...any) error }) (*Service, error) {
 
 // GetServices — todos los servicios de la organización.
 func GetServices(orgID string) ([]Service, error) {
-	rows, err := db.DB.Query(serviceSelect+` WHERE s.organization_id = ? ORDER BY s.name`, orgID)
+	rows, err := db.DB.Query(serviceSelect+` WHERE s.organization_id = ? AND s.deleted_at IS NULL ORDER BY s.name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +80,7 @@ func GetServices(orgID string) ([]Service, error) {
 
 // GetService por id.
 func GetService(orgID, id string) (*Service, error) {
-	s, err := scanService(db.DB.QueryRow(serviceSelect+` WHERE s.organization_id = ? AND s.id = ?`, orgID, id))
+	s, err := scanService(db.DB.QueryRow(serviceSelect+` WHERE s.organization_id = ? AND s.id = ? AND s.deleted_at IS NULL`, orgID, id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -146,7 +146,7 @@ func UpdateService(orgID, id string, r SaveServiceRequest) (*Service, error) {
 	res, err := db.DB.Exec(`UPDATE repair_services SET
 			name=?, description=?, category_id=?, brand_id=?, model_id=?,
 			retail_price=?, public_price=?, distributor_price=?
-		WHERE organization_id=? AND id=?`,
+		WHERE organization_id=? AND id=? AND deleted_at IS NULL`,
 		r.Name, r.Description, idOrNil(r.CategoryID), idOrNil(r.BrandID), idOrNil(r.ModelID),
 		*r.RetailPrice, *r.PublicPrice, *r.DistributorPrice, orgID, id)
 	if err != nil {

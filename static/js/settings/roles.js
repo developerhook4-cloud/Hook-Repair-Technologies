@@ -120,11 +120,15 @@
     listEl.innerHTML = rows.length
       ? rows.map(([r, i]) => permRow(r, i)).join('')
       : '<p class="text-center py-8 text-gray-400 body-normal">No hay permisos que coincidan.</p>';
-    document.getElementById('savePerms').disabled = !selectedRole;
+    syncPermsSave();
+  }
+  function syncPermsSave() {
+    document.getElementById('savePerms').disabled = !selectedRole || toPerms(currentPerms).length === 0;
   }
   document.getElementById('permsList').addEventListener('change', (e) => {
     const cb = e.target.closest('input[data-i]');
     if (cb) currentPerms[Number(cb.dataset.i)][cb.dataset.k] = cb.checked;
+    syncPermsSave();
   });
   document.getElementById('searchPerms').addEventListener('input', renderPerms);
 
@@ -196,7 +200,8 @@
             <input type="text" name="name" maxlength="100" placeholder="Introduzca el nombre del rol"
                    class="w-full md:w-80 border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal placeholder-gray-400" />
           </div>
-          <div class="mb-2"><label class="label-normal text-dark-1">Permisos para el nuevo rol <span class="text-brand-primary">*</span></label></div>
+          <div class="mb-2 flex flex-col gap-1"><label class="label-normal text-dark-1">Permisos para el nuevo rol <span class="text-brand-primary">*</span></label>
+            <small data-perm-hint class="label-small text-error-primary" hidden>Selecciona al menos un permiso.</small></div>
         </div>
         <div class="px-8 overflow-y-auto flex-1 flex flex-col gap-3 pb-4" data-perms></div>
         <div class="p-6 md:px-8 border-t border-gray-100 bg-white flex justify-end gap-4">
@@ -207,19 +212,27 @@
     const name = m.el.querySelector('[name=name]');
     const save = m.el.querySelector('[data-save]');
     const permsEl = m.el.querySelector('[data-perms]');
+    const hint = m.el.querySelector('[data-perm-hint]');
+    const syncSave = () => {
+      const none = toPerms(rows).length === 0;
+      save.disabled = !name.value.trim() || none;
+      hint.hidden = !name.value.trim() || !none;
+    };
     const paint = () => {
       const off = !name.value.trim();
       permsEl.innerHTML = rows.map((r, i) => permRow(r, i, off)).join('');
-      save.disabled = off;
+      syncSave();
     };
     permsEl.addEventListener('change', (e) => {
       const cb = e.target.closest('input[data-i]');
       if (cb) rows[Number(cb.dataset.i)][cb.dataset.k] = cb.checked;
+      syncSave();
     });
     let wasEmpty = true;
     name.addEventListener('input', () => {
       const empty = !name.value.trim();
       if (empty !== wasEmpty) paint();
+      else syncSave();
       wasEmpty = empty;
     });
     paint();
@@ -244,8 +257,8 @@
       message: '¿Está seguro de que desea eliminar el rol',
       name: role.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${role.id}/status`, { active: false });
-        ui.toast('Cambios guardados');
+        await Hook.del(`${endpoint}/${role.id}`);
+        ui.toast('Rol eliminado');
         load(selectedRole && selectedRole.id !== role.id);
       },
     });

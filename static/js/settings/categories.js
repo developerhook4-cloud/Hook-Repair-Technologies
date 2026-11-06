@@ -153,7 +153,7 @@
       message: '¿Está seguro de que desea eliminar la categoría',
       name: category.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${category.id}/status`, { active: false });
+        await Hook.del(`${endpoint}/${category.id}`);
         state.rows = state.rows.filter((r) => r.id !== category.id);
         state.refresh();
         ui.toast('Cambios guardados');

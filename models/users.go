@@ -56,7 +56,7 @@ func scanUser(sc interface{ Scan(...any) error }) (*User, error) {
 
 // GetUsers — usuarios de una organización.
 func GetUsers(orgID string) ([]User, error) {
-	rows, err := db.DB.Query(userSelect+` WHERE u.organization_id = ? ORDER BY u.name`, orgID)
+	rows, err := db.DB.Query(userSelect+` WHERE u.organization_id = ? AND u.deleted_at IS NULL ORDER BY u.name`, orgID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func GetUsers(orgID string) ([]User, error) {
 
 // GetUser — un usuario de la organización.
 func GetUser(orgID, userID string) (*User, error) {
-	u, err := scanUser(db.DB.QueryRow(userSelect+` WHERE u.organization_id = ? AND u.id = ?`, orgID, userID))
+	u, err := scanUser(db.DB.QueryRow(userSelect+` WHERE u.organization_id = ? AND u.id = ? AND u.deleted_at IS NULL`, orgID, userID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -103,15 +103,15 @@ func (r *SaveUserRequest) normalize(requirePassword bool) error {
 	if requirePassword && strings.TrimSpace(r.Password) == "" {
 		return Invalid("La contraseña es obligatoria.")
 	}
-	if runeLen(r.Password) > 300 {
-		return Invalid("La contraseña es demasiado larga.")
+	if r.Password != "" {
+		return ValidatePassword(r.Password)
 	}
 	return nil
 }
 
 func emailTaken(email, exceptID string) (bool, error) {
 	var exists bool
-	err := db.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE email = ? AND (? = '' OR id <> ?))`,
+	err := db.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE email = ? AND deleted_at IS NULL AND (? = '' OR id <> ?))`,
 		email, exceptID, exceptID).Scan(&exists)
 	return exists, err
 }
@@ -176,6 +176,17 @@ func UpdateUser(orgID, userID string, r SaveUserRequest) (*User, error) {
 		}
 		roleID = r.RoleID
 	}
+	if roleID != current.RoleID {
+		role, err := GetRole(orgID, roleID)
+		if err != nil {
+			return nil, err
+		}
+		if !IsAdminRole(role.Permissions) {
+			if err := ensureAdminRemains(orgID, userID, ""); err != nil {
+				return nil, err
+			}
+		}
+	}
 	if taken, err := emailTaken(r.Email, userID); err != nil {
 		return nil, err
 	} else if taken {
@@ -203,7 +214,12 @@ func UpdateUser(orgID, userID string, r SaveUserRequest) (*User, error) {
 
 // SetUserStatus activa o desactiva un usuario.
 func SetUserStatus(orgID, userID string, active bool) error {
-	res, err := db.DB.Exec(`UPDATE users SET active=? WHERE organization_id=? AND id=?`, active, orgID, userID)
+	if !active {
+		if err := ensureAdminRemains(orgID, userID, ""); err != nil {
+			return err
+		}
+	}
+	res, err := db.DB.Exec(`UPDATE users SET active=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`, active, orgID, userID)
 	if err != nil {
 		return err
 	}
@@ -221,7 +237,7 @@ type UpdateProfileRequest struct {
 	NewPassword *string `json:"newPassword"`
 }
 
-// UpdateProfile — mismo flujo que UserService.UpdateProfileAsync.
+// UpdateProfile cambia nombre, email y (si viene) la contraseña del usuario con sesión.
 func UpdateProfile(userID string, r UpdateProfileRequest) error {
 	name := strings.TrimSpace(r.Name)
 	email := strings.ToLower(strings.TrimSpace(r.Email))
@@ -230,7 +246,7 @@ func UpdateProfile(userID string, r UpdateProfileRequest) error {
 	}
 	var currentEmail, hash string
 	var active bool
-	err := db.DB.QueryRow(`SELECT email, password_hash, active FROM users WHERE id = ?`, userID).
+	err := db.DB.QueryRow(`SELECT email, password_hash, active FROM users WHERE id = ? AND deleted_at IS NULL`, userID).
 		Scan(&currentEmail, &hash, &active)
 	if errors.Is(err, sql.ErrNoRows) || (err == nil && !active) {
 		return Invalid("Usuario no encontrado o inactivo.")
@@ -252,6 +268,9 @@ func UpdateProfile(userID string, r UpdateProfileRequest) error {
 		}
 		if !CheckPassword(*r.OldPassword, hash) {
 			return Invalid("La contraseña actual es incorrecta.")
+		}
+		if err := ValidatePassword(*r.NewPassword); err != nil {
+			return err
 		}
 		if newHash, err = HashPassword(*r.NewPassword); err != nil {
 			return err
@@ -291,7 +310,7 @@ func loadSessionUser(where string, arg any) (*SessionUser, string, error) {
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		JOIN organizations o ON o.id = u.organization_id
-		WHERE `+where, arg).
+		WHERE u.deleted_at IS NULL AND `+where, arg).
 		Scan(&u.ID, &u.Name, &u.Email, &u.RoleID, &u.Role, &perms, &u.OrganizationID, &hash, &userActive, &roleActive, &orgActive)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", ErrNotFound
@@ -337,7 +356,7 @@ func Authenticate(email, password string) (*SessionUser, error) {
 func SeedRootAdmin() {
 	const email = "admin@hookrepair.com"
 	var exists bool
-	if err := db.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE email = ?)`, email).Scan(&exists); err != nil {
+	if err := db.DB.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE email = ? AND deleted_at IS NULL)`, email).Scan(&exists); err != nil {
 		log.Printf("Seed: no se pudo revisar el admin: %v", err)
 		return
 	}

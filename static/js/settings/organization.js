@@ -7,7 +7,6 @@
   const form = document.getElementById('orgForm');
   const submit = document.getElementById('orgSubmit');
   const nameRe = /^[a-zA-Z0-9\s.,&\-ñÑáéíóúÁÉÍÓÚüÜ]+$/;
-  const phoneRe = /^[0-9+\-\s()]+$/;
 
   // Con el menú lateral colapsado, las dos secciones van lado a lado
   function applyLayout(collapsed) {
@@ -30,12 +29,14 @@
     {
       name: [ui.rules.required, ui.rules.pattern(nameRe)],
       email: [ui.rules.required, ui.rules.email],
-      phone: [ui.rules.pattern(phoneRe)],
-      phone2: [ui.rules.pattern(phoneRe)],
+      phone: [ui.rules.phone],
+      phone2: [ui.rules.phone],
       postCode: [ui.rules.pattern(/^[0-9]+$/)],
     },
     (valid) => (submit.disabled = !valid)
   );
+
+  ui.phoneInputs(form);
 
   async function load() {
     try {

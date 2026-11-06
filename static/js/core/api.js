@@ -89,6 +89,7 @@
   Hook.post = (path, body) => Hook.api('POST', path, body === undefined ? {} : body);
   Hook.put = (path, body) => Hook.api('PUT', path, body);
   Hook.patch = (path, body) => Hook.api('PATCH', path, body);
+  Hook.del = (path) => Hook.api('DELETE', path);
 
   /** Cerrar sesión y volver al login. */
   Hook.logout = async function () {

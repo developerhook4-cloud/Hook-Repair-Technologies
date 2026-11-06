@@ -11,13 +11,29 @@
     { value: '1', label: 'Distribuidor' },
   ];
   const STATES = ['Sonora', 'Sinaloa', 'Baja California', 'Chihuahua', 'Nuevo León', 'Jalisco', 'Ciudad de México'];
+  // Catálogos del SAT (CFDI 4.0)
   const TAX_REGIMES = [
-    'General de Ley Personas Morales',
-    'Personas Físicas con Actividades Empresariales',
-    'Régimen Simplificado de Confianza (RESICO)',
+    '601 - General de Ley Personas Morales',
+    '603 - Personas Morales con Fines no Lucrativos',
+    '605 - Sueldos y Salarios e Ingresos Asimilados a Salarios',
+    '606 - Arrendamiento',
+    '608 - Demás ingresos',
+    '612 - Personas Físicas con Actividades Empresariales y Profesionales',
+    '616 - Sin obligaciones fiscales',
+    '621 - Incorporación Fiscal',
+    '625 - Actividades Empresariales con ingresos a través de Plataformas Tecnológicas',
+    '626 - Régimen Simplificado de Confianza (RESICO)',
   ];
-  const EXPENSE_TYPES = ['Gastos en general', 'Adquisición de mercancías', 'Honorarios médicos'];
-  const toItems = (arr) => arr.map((v) => ({ value: v, label: v }));
+  const EXPENSE_TYPES = [
+    'G01 - Adquisición de mercancías',
+    'G02 - Devoluciones, descuentos o bonificaciones',
+    'G03 - Gastos en general',
+    'I04 - Equipo de cómputo y accesorios',
+    'I08 - Otra maquinaria y equipo',
+    'S01 - Sin efectos fiscales',
+    'CP01 - Pagos',
+  ];
+  const toItems = (arr, current) => (current && !arr.includes(current) ? [current, ...arr] : arr).map((v) => ({ value: v, label: v }));
 
   const typePill = (t) =>
     `<span class="px-4 py-1.5 rounded-full label-small font-bold inline-block whitespace-nowrap ${
@@ -35,13 +51,13 @@
     state,
     emptyText: 'No se encontraron clientes.',
     columns: [
-      { key: 'id', label: 'ID', width: 80, sort: 'id', render: (c) => esc(c.id.slice(0, 8)), title: (c) => c.id },
+      { key: 'id', label: 'ID', width: 80, sort: 'id', render: (c) => esc(c.id), title: (c) => c.id },
       { key: 'name', label: 'Nombre', width: 250, sort: 'name', title: (c) => c.name },
       { key: 'phone1', label: 'Teléfono', width: 180 },
       { key: 'customerType', label: 'Tipo de cliente', width: 180, sort: 'type', render: (c) => typePill(c.customerType), text: (c) => (c.customerType === 1 ? 'Distribuidor' : 'Cliente') },
       { key: 'active', label: 'Estado', width: 120, render: (c) => ui.statusPill(c.active), text: (c) => (c.active ? 'Activo' : 'Inactivo') },
     ],
-    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar') + ui.actionBtn('more', 'ellipsis', 'Más'),
+    actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar'),
     onAction: (action, c) => (action === 'edit' ? openModal(c) : action === 'delete' ? openDelete(c) : null),
   });
 
@@ -58,11 +74,12 @@
     }
   }
 
-  const input = (label, name, value, placeholder, { required = false, small = false, type = 'text' } = {}) => `
+  const input = (label, name, value, placeholder, { required = false, small = false, type = 'text', phone = false } = {}) => `
     <div class="flex flex-col gap-1.5">
       <label class="${small ? 'label-small text-dark-2' : 'label-normal font-semibold text-dark-1'}">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
-      <input type="${type}" name="${name}" value="${esc(value || '')}" placeholder="${esc(placeholder)}"
+      <input type="${type}" name="${name}" value="${esc(value || '')}" placeholder="${esc(placeholder)}" ${phone ? 'data-phone' : ''}
              class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 placeholder-gray-300" />
+      <small data-error-for="${name}" class="label-small text-error-primary" hidden></small>
     </div>`;
 
   const dd = (label, id, small = false) => `
@@ -93,7 +110,7 @@
           <div class="flex flex-col md:flex-row gap-10">
             <div class="flex flex-col gap-5 flex-1">
               ${input('Nombre', 'name', c.name, 'Introduzca el nombre del cliente', { required: true })}
-              ${input('Número de teléfono', 'phone1', c.phone1, 'Introduzca el número de teléfono', { required: true })}
+              ${input('Número de teléfono', 'phone1', c.phone1, '662 123 4567', { required: true, phone: true })}
               <div class="flex flex-col gap-1.5">
                 <label class="label-normal font-semibold text-dark-1">Tipo de cliente <span class="text-brand-primary">*</span></label>
                 <div id="ddType"></div>
@@ -105,11 +122,14 @@
                 </label>
                 <div data-invoice class="flex flex-col gap-4 transition-all duration-300" ${c.rfc || c.taxRegime ? '' : 'hidden'}>
                   <div class="flex flex-col gap-1.5">
-                    <label class="label-normal text-dark-1">RFC</label>
-                    <input type="text" name="rfc" maxlength="13" value="${esc(c.rfc || '')}" placeholder="RFC del cliente" class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 placeholder-gray-300 uppercase" />
+                    <label class="label-normal text-dark-1">RFC <span class="text-brand-primary">*</span></label>
+                    <input type="text" name="rfc" maxlength="13" value="${esc(c.rfc || '')}" placeholder="Ej. XAXX010101000" class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 placeholder-gray-300 uppercase" />
+                    <small data-error-for="rfc" class="label-small text-error-primary" hidden></small>
+                    <span class="label-small text-gray-400">12 caracteres (persona moral) o 13 (persona física).</span>
                   </div>
-                  ${dd('Régimen fiscal', 'ddTax')}
-                  ${dd('Tipo de gasto', 'ddExpense')}
+                  ${dd('Régimen fiscal *', 'ddTax')}
+                  ${dd('Uso de CFDI (tipo de gasto) *', 'ddExpense')}
+                  <small data-invoice-error class="label-small text-error-primary" hidden></small>
                 </div>
               </div>
               ${editing ? dd('Estado', 'ddStatus') : ''}
@@ -120,7 +140,7 @@
                 <h3 class="label-normal font-bold text-dark-1">Datos de distribuidor</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   ${input('Nombre comercial', 'legalName', c.legalName, 'Introduzca el nombre del local', { small: true })}
-                  ${input('Celular', 'phone2', c.phone2, '+52 662 123 4567', { small: true })}
+                  ${input('Celular', 'phone2', c.phone2, '662 123 4567', { small: true, phone: true })}
                   ${input('Nombre del titular', 'titularName', c.titularName, 'Introduzca el nombre del titular', { small: true })}
                   ${input('Email', 'email', c.email, 'cliente@email.com', { small: true, type: 'email' })}
                 </div>
@@ -167,8 +187,8 @@
         applyType();
       },
     });
-    ui.dropdown(m.el.querySelector('#ddTax'), { items: toItems(TAX_REGIMES), value: cur.taxRegime, placeholder: 'Seleccionar régimen fiscal', up: true, onChange: (v) => (cur.taxRegime = v) });
-    ui.dropdown(m.el.querySelector('#ddExpense'), { items: toItems(EXPENSE_TYPES), value: cur.expenseType, placeholder: 'Seleccionar tipo de gasto', up: true, onChange: (v) => (cur.expenseType = v) });
+    ui.dropdown(m.el.querySelector('#ddTax'), { items: toItems(TAX_REGIMES, cur.taxRegime), value: cur.taxRegime, placeholder: 'Seleccionar régimen fiscal', up: true, onChange: (v) => ((cur.taxRegime = v), validate()) });
+    ui.dropdown(m.el.querySelector('#ddExpense'), { items: toItems(EXPENSE_TYPES, cur.expenseType), value: cur.expenseType, placeholder: 'Seleccionar uso de CFDI', up: true, onChange: (v) => ((cur.expenseType = v), validate()) });
     ui.dropdown(m.el.querySelector('#ddState'), { items: toItems(STATES), value: cur.state, placeholder: 'Elegir estado', up: true, onChange: (v) => (cur.state = v) });
     if (editing) {
       ui.dropdown(m.el.querySelector('#ddStatus'), {
@@ -181,15 +201,40 @@
         onChange: (v) => (cur.active = v === 'true'),
       });
     }
-    m.el.querySelector('[name=requiresInvoice]').addEventListener('change', (e) => (invoiceBox.hidden = !e.target.checked));
     applyType();
+    ui.phoneInputs(form);
 
-    const valid = () => {
-      const f = ui.formValues(form);
-      return f.name.trim() !== '' && f.phone1.trim() !== '';
-    };
-    form.addEventListener('input', () => (save.disabled = !valid()));
-    save.disabled = !valid();
+    // Si "Requiere facturar" está marcado, RFC, régimen y uso de CFDI son obligatorios.
+    const invoiceError = m.el.querySelector('[data-invoice-error]');
+    const v = ui.validator(
+      form,
+      {
+        name: [ui.rules.required],
+        phone1: [ui.rules.required, ui.rules.phone],
+        phone2: [ui.rules.phone],
+        email: [ui.rules.email],
+        rfc: [
+          [(x, all) => !all.requiresInvoice || !!x, 'El RFC es obligatorio para facturar.'],
+          [(x, all) => !all.requiresInvoice || ui.isRFC(x), 'RFC no válido: 12 o 13 caracteres con el formato del SAT.'],
+        ],
+      },
+      null
+    );
+    function validate() {
+      const ok = v.validate();
+      const invoice = form.querySelector('[name=requiresInvoice]').checked;
+      const missing = invoice && (!cur.taxRegime || !cur.expenseType);
+      invoiceError.hidden = !missing;
+      invoiceError.textContent = missing ? 'Selecciona el régimen fiscal y el uso de CFDI.' : '';
+      save.disabled = !ok || missing;
+    }
+    form.addEventListener('input', validate);
+    form.addEventListener('focusout', () => setTimeout(validate));
+    m.el.querySelector('[name=requiresInvoice]').addEventListener('change', (e) => {
+      invoiceBox.hidden = !e.target.checked;
+      validate();
+    });
+    validate();
 
     save.addEventListener('click', () =>
       ui.busy(save, async () => {
@@ -238,8 +283,8 @@
       message: '¿Está seguro de que desea eliminar al cliente',
       name: client.name,
       onConfirm: async () => {
-        await Hook.patch(`${endpoint}/${client.id}/status`, { active: false });
-        ui.toast('Cambios guardados');
+        await Hook.del(`${endpoint}/${client.id}`);
+        ui.toast('Cliente eliminado');
         load();
       },
     });
