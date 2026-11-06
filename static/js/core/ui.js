@@ -59,18 +59,14 @@
   ui.toast = function (message = 'Cambios guardados', type = 'success') {
     let t = document.getElementById('hook-toast');
     if (!t) {
-      t = ui.el(
-        `<div id="hook-toast" role="status" aria-live="polite"
-              class="fixed bottom-12 left-1/2 -translate-x-1/2 text-white px-8 py-3 rounded-full shadow-2xl flex items-center justify-center gap-3 z-100 transition-opacity duration-300 opacity-0 pointer-events-none"></div>`
-      );
+      t = ui.el(`<div id="hook-toast" role="status" aria-live="polite" class="toast"></div>`);
       document.body.appendChild(t);
     }
-    t.classList.remove('bg-brand-primary', 'bg-error-darker', 'bg-dark-1');
-    t.classList.add(type === 'error' ? 'bg-error-darker' : 'bg-brand-primary');
-    t.innerHTML = `${type === 'error' ? ui.icon('circle-exclamation') : ''}<span class="label-normal font-bold">${esc(message)}</span>`;
-    requestAnimationFrame(() => t.classList.replace('opacity-0', 'opacity-100'));
+    t.classList.toggle('toast--error', type === 'error');
+    t.innerHTML = `${type === 'error' ? ui.icon('circle-exclamation') : ''}<span class="label-normal toast__text">${esc(message)}</span>`;
+    requestAnimationFrame(() => t.classList.add('is-visible'));
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.replace('opacity-100', 'opacity-0'), type === 'error' ? 4500 : 3000);
+    toastTimer = setTimeout(() => t.classList.remove('is-visible'), type === 'error' ? 4500 : 3000);
   };
 
   /** Muestra el error de una llamada a la API. */
@@ -85,16 +81,17 @@
 
   /**
    * Abre un modal. `content` es el HTML de la tarjeta interior.
-   * opts.overlayClass permite cambiar el fondo; opts.onClose se llama al cerrar.
+   * opts.layer: 'top' para un modal encima de otro (alta rápida, recibir mercancía);
+   * opts.overlay: clase extra para el fondo; opts.onClose se llama al cerrar.
    * Devuelve { el, card, close }.
    */
   ui.modal = function (content, opts = {}) {
     const overlay = ui.el(
-      `<div class="fixed inset-0 ${opts.z || 'z-50'} flex items-center justify-center ${opts.overlayClass || 'bg-gray-500/20'} backdrop-blur-sm p-4 md:p-6 transition-all duration-300" role="dialog" aria-modal="true"></div>`
+      `<div class="modal-overlay${opts.layer === 'top' ? ' modal-overlay--top' : ''}${opts.overlay ? ' ' + opts.overlay : ''}" role="dialog" aria-modal="true"></div>`
     );
     overlay.innerHTML = content;
     document.body.appendChild(overlay);
-    document.body.classList.add('overflow-hidden');
+    document.body.classList.add('has-modal');
 
     const api = {
       el: overlay,
@@ -103,7 +100,7 @@
         const i = openModals.indexOf(api);
         if (i >= 0) openModals.splice(i, 1);
         overlay.remove();
-        if (!openModals.length) document.body.classList.remove('overflow-hidden');
+        if (!openModals.length) document.body.classList.remove('has-modal');
         if (opts.onClose) opts.onClose();
       },
     };
@@ -125,9 +122,9 @@
 
   /** Encabezado estándar de los modales (título + botón de cerrar). */
   ui.modalHeader = (title, extra = '') => `
-    <div class="flex justify-between items-start mb-6">
-      <div class="flex items-center gap-3"><h2 class="heading-5 text-dark-1">${esc(title)}</h2>${extra}</div>
-      <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors" aria-label="Cerrar">${ui.icon('xmark', 'text-xl')}</button>
+    <div class="modal-header">
+      <div class="modal-header__title"><h2 class="heading-5">${esc(title)}</h2>${extra}</div>
+      <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
     </div>`;
 
   /**
@@ -136,13 +133,13 @@
    */
   ui.confirmDelete = function ({ title, message, name, confirmText = 'Sí, eliminar', onConfirm }) {
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-100 p-8 flex flex-col items-center text-center border border-gray-100 animate-fade-in">
-        <div class="h-16 w-16 rounded-full bg-error-subtle text-brand-primary flex items-center justify-center mb-6">${ui.icon('triangle-exclamation', 'text-3xl')}</div>
-        <h3 class="heading-5 mb-3">${esc(title)}</h3>
-        <p class="body-normal text-dark-2 mb-8">${esc(message)} <strong class="text-dark-1">“${esc(name)}”</strong>?</p>
-        <div class="flex justify-center gap-4 w-full">
-          <button type="button" data-close class="flex-1 py-3 rounded-2xl bg-gray-100 text-dark-2 label-normal hover:bg-gray-200 transition-colors">Cancelar</button>
-          <button type="button" data-confirm class="flex-1 py-3 rounded-2xl bg-brand-primary text-white label-normal hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50">${esc(confirmText)}</button>
+      <div class="modal-card modal-card--confirm">
+        <div class="confirm__icon">${ui.icon('triangle-exclamation')}</div>
+        <h3 class="heading-5 confirm__title">${esc(title)}</h3>
+        <p class="body-normal confirm__text">${esc(message)} <strong>“${esc(name)}”</strong>?</p>
+        <div class="confirm__actions">
+          <button type="button" data-close class="btn btn--soft confirm__btn">Cancelar</button>
+          <button type="button" data-confirm class="btn btn--primary confirm__btn">${esc(confirmText)}</button>
         </div>
       </div>`);
     const btn = m.el.querySelector('[data-confirm]');
@@ -187,15 +184,6 @@
     closeAllDropdowns(dd || undefined);
   });
 
-  const DD_BUTTON = {
-    outline:
-      'w-full bg-white border border-gray-300 px-4 py-2.5 rounded-[14px] body-normal text-dark-1 flex items-center justify-between gap-2 hover:border-brand-primary transition-colors focus:outline-none focus:border-brand-primary text-left disabled:opacity-50 disabled:bg-gray-50 disabled:cursor-not-allowed',
-    filled:
-      'w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-[14px] body-normal text-dark-1 flex items-center justify-between gap-2 hover:border-brand-primary transition-colors focus:outline-none focus:border-brand-primary text-left',
-    solid:
-      'w-full bg-brand-primary text-white px-5 py-2.5 rounded-lg label-normal font-bold flex items-center justify-between gap-2 hover:opacity-90 transition-opacity shadow-sm',
-  };
-
   /**
    * Convierte `container` en un select personalizado.
    *  items:       [{ value, label }]
@@ -209,15 +197,15 @@
    */
   ui.dropdown = function (container, opts) {
     const o = Object.assign({ items: [], value: null, placeholder: 'Seleccionar', none: null, up: false, variant: 'outline' }, opts);
-    container.classList.add('relative', 'w-full');
+    container.classList.add('dd');
     container.setAttribute('data-dd', '');
     container.innerHTML = `
-      <button type="button" class="${DD_BUTTON[o.variant] || DD_BUTTON.outline}" aria-haspopup="listbox" aria-expanded="false">
-        <span class="truncate" data-label></span>
-        ${ui.icon('chevron-down', 'text-sm transition-transform duration-200 shrink-0 ' + (o.variant === 'solid' ? '' : 'text-gray-400'))}
+      <button type="button" class="dd__button dd__button--${['filled', 'solid'].includes(o.variant) ? o.variant : 'outline'}" aria-haspopup="listbox" aria-expanded="false">
+        <span class="dd__label" data-label></span>
+        ${ui.icon('chevron-down', 'dd__chevron')}
       </button>
-      <div class="absolute ${o.up ? 'bottom-full mb-1' : 'top-full mt-1'} left-0 w-full bg-white rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] border border-gray-100 z-60 p-1.5 max-h-48 overflow-y-auto" hidden>
-        <ul class="flex flex-col text-sm font-semibold" role="listbox"></ul>
+      <div class="dd__panel${o.up ? ' dd__panel--up' : ''}" hidden>
+        <ul class="dd__list" role="listbox"></ul>
       </div>`;
     const btn = container.querySelector('button');
     const label = container.querySelector('[data-label]');
@@ -253,21 +241,19 @@
     function paint() {
       const c = current();
       label.textContent = c ? c.label : o.placeholder;
-      label.classList.toggle('text-gray-400', !c && o.variant !== 'solid');
+      label.classList.toggle('is-placeholder', !c);
       let html = '';
       if (o.none !== null) {
-        html += `<li data-v="" class="px-4 py-2.5 rounded-md cursor-pointer transition-colors text-gray-400 hover:bg-gray-50">${esc(o.none)}</li>`;
+        html += `<li data-v="" class="dd__option dd__option--none">${esc(o.none)}</li>`;
       }
       html += o.items
         .map((i) => {
           const sel = String(i.value) === String(o.value);
-          return `<li data-v="${esc(i.value)}" role="option" aria-selected="${sel}" class="px-4 py-2.5 rounded-md cursor-pointer transition-colors ${
-            sel ? 'text-brand-primary bg-red-50' : 'text-dark-2 hover:bg-red-50 hover:text-brand-primary'
-          }">${esc(i.label)}</li>`;
+          return `<li data-v="${esc(i.value)}" role="option" aria-selected="${sel}" class="dd__option${sel ? ' is-selected' : ''}">${esc(i.label)}</li>`;
         })
         .join('');
       if (!o.items.length && o.none === null) {
-        html = `<li class="px-4 py-2.5 text-gray-400 font-normal">Sin opciones</li>`;
+        html = `<li class="dd__empty">Sin opciones</li>`;
       }
       list.innerHTML = html;
     }
@@ -276,13 +262,13 @@
       panel.hidden = false;
       container.setAttribute('data-dd-open', '');
       btn.setAttribute('aria-expanded', 'true');
-      chevron.classList.add('rotate-180');
+      chevron.classList.add('is-open');
     }
     container._close = function () {
       panel.hidden = true;
       container.removeAttribute('data-dd-open');
       btn.setAttribute('aria-expanded', 'false');
-      chevron.classList.remove('rotate-180');
+      chevron.classList.remove('is-open');
     };
     btn.addEventListener('click', () => (panel.hidden ? open() : container._close()));
     list.addEventListener('click', (e) => {
@@ -308,27 +294,22 @@
     const pages = Array.from({ length: total }, (_, i) => i + 1)
       .map(
         (p) =>
-          `<button type="button" data-page="${p}" class="w-6 h-6 flex items-center justify-center rounded-full transition-colors label-normal ${
-            p === page ? 'bg-brand-primary text-white' : 'hover:text-brand-primary'
-          }">${p}</button>`
+          `<button type="button" data-page="${p}" class="label-normal pager__page${p === page ? ' is-current' : ''}">${p}</button>`
       )
       .join('');
     const pager = `
-      <div class="flex items-center gap-3 bg-white px-4 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
-        <button type="button" data-page="${page - 1}" ${page === 1 ? 'disabled' : ''} class="text-gray-400 hover:text-dark-1 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" aria-label="Anterior">${ui.icon('chevron-left')}</button>
-        <div class="flex items-center gap-3 flex-wrap justify-center">${pages}</div>
-        <button type="button" data-page="${page + 1}" ${page === total ? 'disabled' : ''} class="text-dark-1 hover:text-brand-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors" aria-label="Siguiente">${ui.icon('chevron-right')}</button>
+      <div class="pager__box">
+        <button type="button" data-page="${page - 1}" ${page === 1 ? 'disabled' : ''} class="pager__arrow pager__arrow--prev" aria-label="Anterior">${ui.icon('chevron-left')}</button>
+        <div class="pager__pages">${pages}</div>
+        <button type="button" data-page="${page + 1}" ${page === total ? 'disabled' : ''} class="pager__arrow" aria-label="Siguiente">${ui.icon('chevron-right')}</button>
       </div>`;
     const goto = goTo
-      ? `<div class="hidden md:flex items-center gap-3 ${layout === 'center' ? 'absolute right-0' : ''}">
+      ? `<div class="pager__goto">
            <span>Ir a pág.</span>
-           <input type="number" min="1" max="${total}" value="${page}" data-goto class="no-spin bg-gray-100 rounded-lg w-9 h-9 text-center p-0 text-gray-600 focus:outline-none focus:ring-1 focus:ring-brand-primary" />
+           <input type="number" min="1" max="${total}" value="${page}" data-goto class="no-spin pager__goto-input" />
          </div>`
       : '';
-    container.className =
-      layout === 'center'
-        ? 'mt-auto relative flex justify-center items-center w-full body-normal font-semibold text-dark-2'
-        : 'mt-auto pt-2 flex justify-between md:justify-end items-center gap-12 w-full body-normal font-semibold text-dark-2';
+    container.className = `body-normal pager pager--${layout === 'center' ? 'center' : 'end'}`;
     container.innerHTML = pager + goto;
     container.onclick = (e) => {
       const b = e.target.closest('button[data-page]');
@@ -439,28 +420,28 @@
     const widths = o.columns.map((c) => c.width || 150);
     let lastRows = [];
 
-    container.className = 'w-full border border-gray-100 rounded-[20px] overflow-x-auto shadow-sm mb-6';
+    container.className = 'data-table';
 
     function headerCell(c, i) {
       const sorted = o.state && o.state.sortKey === c.sort;
       const arrow = c.sort
         ? sorted
-          ? ui.icon(o.state.sortDir === 'asc' ? 'arrow-up' : 'arrow-down', 'text-brand-primary text-xs')
-          : ui.icon('arrow-up', 'text-gray-400 text-xs')
+          ? ui.icon(o.state.sortDir === 'asc' ? 'arrow-up' : 'arrow-down', 'data-table__sort-icon is-active')
+          : ui.icon('arrow-up', 'data-table__sort-icon')
         : '';
       return `
-        <th class="relative py-4 px-6 text-center select-none group" style="width:${widths[i]}px;min-width:${widths[i]}px">
-          <div class="flex items-center justify-center gap-2 w-full whitespace-nowrap ${c.sort ? 'cursor-pointer transition-colors hover:text-brand-primary' : ''}" ${c.sort ? `data-sort="${c.sort}"` : ''}>
+        <th class="data-table__th" style="width:${widths[i]}px;min-width:${widths[i]}px">
+          <div class="data-table__head${c.sort ? ' is-sortable' : ''}" ${c.sort ? `data-sort="${c.sort}"` : ''}>
             ${esc(c.label)} ${arrow}
           </div>
-          <div class="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-gray-400 opacity-0 group-hover:opacity-100 transition-opacity z-10" data-resize="${i}"></div>
+          <div class="data-table__resize" data-resize="${i}"></div>
         </th>`;
     }
 
     function render(rows) {
       lastRows = rows;
       const total = widths.reduce((a, b) => a + b, 0) + (o.actions ? 120 : 0);
-      const head = o.columns.map(headerCell).join('') + (o.actions ? `<th class="py-4 px-6 text-center whitespace-nowrap min-w-30 w-30">${esc(o.actionsLabel)}</th>` : '');
+      const head = o.columns.map(headerCell).join('') + (o.actions ? `<th class="data-table__th data-table__th--actions">${esc(o.actionsLabel)}</th>` : '');
       const colspan = o.columns.length + (o.actions ? 1 : 0);
       const body = rows.length
         ? rows
@@ -469,19 +450,19 @@
                 .map((c, i) => {
                   const content = c.render ? c.render(r) : esc(r[c.key]);
                   const title = c.title ? ` title="${esc(c.title(r))}"` : '';
-                  return `<td class="py-4 px-6 text-center truncate ${c.cellClass || ''}" style="width:${widths[i]}px;min-width:${widths[i]}px;max-width:${widths[i]}px"${title}>${content}</td>`;
+                  return `<td class="data-table__td${c.cellClass ? ' ' + c.cellClass : ''}" style="width:${widths[i]}px;min-width:${widths[i]}px;max-width:${widths[i]}px"${title}>${content}</td>`;
                 })
                 .join('');
-              const actions = o.actions ? `<td class="py-4 px-6 min-w-30 w-30"><div class="flex items-center justify-center gap-4 text-gray-400">${o.actions(r)}</div></td>` : '';
-              return `<tr class="hover:bg-gray-50 transition-colors ${ri < rows.length - 1 ? 'border-b border-gray-100' : ''}" data-row="${ri}">${cells}${actions}</tr>`;
+              const actions = o.actions ? `<td class="data-table__td data-table__td--actions"><div class="data-table__actions">${o.actions(r)}</div></td>` : '';
+              return `<tr class="data-table__row" data-row="${ri}">${cells}${actions}</tr>`;
             })
             .join('')
-        : `<tr><td colspan="${colspan}" class="py-12 text-center text-gray-400 body-normal">${esc(o.emptyText)}</td></tr>`;
+        : `<tr><td colspan="${colspan}" class="body-normal data-table__empty">${esc(o.emptyText)}</td></tr>`;
 
       container.innerHTML = `
-        <table class="w-full text-left border-collapse table-fixed" style="min-width:${total}px">
-          <thead class="bg-gray-100 text-dark-2 label-normal border-b border-gray-200"><tr>${head}</tr></thead>
-          <tbody class="body-normal text-dark-1">${body}</tbody>
+        <table class="data-table__table" style="min-width:${total}px">
+          <thead class="label-normal data-table__thead"><tr>${head}</tr></thead>
+          <tbody class="body-normal data-table__tbody">${body}</tbody>
         </table>`;
     }
 
@@ -557,27 +538,25 @@
         rows = list;
         container.innerHTML = list.length
           ? list.map((r, i) => rowHtml(r, i === list.length - 1).replace('<div', `<div data-i="${i}"`)).join('')
-          : `<div class="py-12 flex flex-col items-center justify-center text-gray-400"><p class="body-normal">${esc(emptyText)}</p></div>`;
+          : `<div class="card-list__empty"><p class="body-normal">${esc(emptyText)}</p></div>`;
       },
     };
   };
 
   /** Botones de editar / eliminar de las listas de tarjetas. */
-  ui.cardButtons = (editHover = 'hover:text-brand-primary') => `
-    <div class="flex items-center gap-2">
-      <button type="button" data-action="edit" title="Editar" class="w-8 h-8 flex items-center justify-center text-gray-400 ${editHover} transition-colors">${ui.icon('pen')}</button>
-      <button type="button" data-action="delete" title="Eliminar" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">${ui.icon('trash-can')}</button>
+  ui.cardButtons = () => `
+    <div class="card-actions">
+      <button type="button" data-action="edit" title="Editar" class="card-btn">${ui.icon('pen')}</button>
+      <button type="button" data-action="delete" title="Eliminar" class="card-btn card-btn--delete">${ui.icon('trash-can')}</button>
     </div>`;
 
   /** Botones de acción de tabla (lápiz / basura / …). */
   ui.actionBtn = (action, iconName, title) =>
-    `<button type="button" data-action="${action}" title="${esc(title)}" class="hover:text-brand-primary transition-colors">${ui.icon(iconName)}</button>`;
+    `<button type="button" data-action="${action}" title="${esc(title)}" class="action-btn">${ui.icon(iconName)}</button>`;
 
   /** Píldora de estado Activo / Inactivo. */
   ui.statusPill = (active) =>
-    `<span class="px-4 py-1.5 rounded-full label-small inline-block whitespace-nowrap ${
-      active ? 'bg-success-subtle text-success-darker' : 'bg-error-subtle text-error-primary'
-    }">${active ? 'Activo' : 'Inactivo'}</span>`;
+    `<span class="label-small pill ${active ? 'pill--success' : 'pill--danger'}">${active ? 'Activo' : 'Inactivo'}</span>`;
 
   // ── Formularios ─────────────────────────────────────────────────────
 
@@ -592,22 +571,22 @@
   };
 
   /** Campo de texto con etiqueta (estilo de los modales). */
-  ui.field = function ({ label, name, value = '', type = 'text', placeholder = '', required = false, readonly = false, span = '', inputClass = '', prefix = '', phone = false, hint = '' }) {
-    const pad = prefix ? 'pl-8 pr-4' : 'px-4';
-    const input = `<input type="${type}" name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${readonly ? 'readonly' : ''} ${phone ? 'data-phone' : ''}
-        class="w-full border border-gray-300 rounded-[14px] ${pad} py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 ${readonly ? 'bg-gray-50' : ''} ${inputClass}" ${type === 'number' ? 'step="any"' : ''}/>`;
+  /** span: true → ocupa las dos columnas de .form-grid. */
+  ui.field = function ({ label, name, value = '', type = 'text', placeholder = '', required = false, readonly = false, span = false, prefix = '', phone = false, hint = '', extra = '' }) {
+    const input = `<input type="${type}" name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${readonly ? 'readonly' : ''} ${phone ? 'data-phone' : ''} ${extra}
+        class="input${prefix ? ' input--prefixed' : ''}" ${type === 'number' ? 'step="any"' : ''}/>`;
     return `
-      <div class="flex flex-col gap-1.5 ${span}">
-        <label class="label-normal text-dark-1">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
-        ${prefix ? `<div class="relative w-full"><span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 body-normal">${esc(prefix)}</span>${input}</div>` : input}
-        <small data-error-for="${name}" class="label-small text-error-primary" hidden></small>${hint ? `<span class="label-small text-gray-400">${esc(hint)}</span>` : ''}
+      <div class="field${span ? ' field--span' : ''}">
+        <label class="label-normal field__label">${esc(label)}${required ? ' <span class="req">*</span>' : ''}</label>
+        ${prefix ? `<div class="field__prefix-wrap"><span class="body-normal field__prefix">${esc(prefix)}</span>${input}</div>` : input}
+        <small data-error-for="${name}" class="label-small field__error" hidden></small>${hint ? `<span class="label-small field__hint">${esc(hint)}</span>` : ''}
       </div>`;
   };
 
   /** Contenedor con etiqueta para un dropdown. */
-  ui.ddField = ({ label, id, required = false, span = '' }) => `
-    <div class="flex flex-col gap-1.5 ${span}">
-      <label class="label-normal text-dark-1">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
+  ui.ddField = ({ label, id, required = false, span = false, extra = '' }) => `
+    <div class="field${span ? ' field--span' : ''}">
+      <div class="field__label-row"><label class="label-normal field__label">${esc(label)}${required ? ' <span class="req">*</span>' : ''}</label>${extra}</div>
       <div id="${id}"></div>
     </div>`;
 
@@ -618,7 +597,7 @@
         const input = btn.parentElement.querySelector('input');
         const show = input.type === 'password';
         input.type = show ? 'text' : 'password';
-        btn.innerHTML = ui.icon(show ? 'eye' : 'eye-slash', 'text-lg');
+        btn.innerHTML = ui.icon(show ? 'eye' : 'eye-slash');
       });
     });
   };
@@ -726,7 +705,7 @@
    * del formulario actual (categoría, marca, modelo, proveedor…).
    */
   ui.quickAddBtn = (key, text = 'Nueva') =>
-    `<button type="button" data-quick-add="${key}" class="ml-auto label-small font-bold text-brand-primary hover:underline inline-flex items-center gap-1">${ui.icon('plus', 'text-[10px]')} ${esc(text)}</button>`;
+    `<button type="button" data-quick-add="${key}" class="label-small quick-add">${ui.icon('plus')} ${esc(text)}</button>`;
 
   /**
    * Modal pequeño encima del actual para dar de alta un registro.
@@ -738,29 +717,25 @@
    */
   ui.quickAdd = function ({ title, fields, note = '', validate, save, onCreated }) {
     const m = ui.modal(
-      `<div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-100 overflow-visible animate-fade-in">
-        <div class="p-6 md:p-8 pb-2">
+      `<div class="modal-card modal-card--sm">
+        <div class="modal-body">
           ${ui.modalHeader(title)}
-          ${note ? `<p class="body-normal text-dark-2 -mt-3 mb-4">${esc(note)}</p>` : ''}
-          <div class="flex flex-col gap-4" data-form>
+          ${note ? `<p class="body-normal modal-note">${esc(note)}</p>` : ''}
+          <div class="form-stack" data-form>
             ${fields
-              .map(
-                (f) => `<div class="flex flex-col gap-1.5">
-                  <label class="label-normal text-dark-1">${esc(f.label)}${f.required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
-                  <input type="${f.type || 'text'}" name="${f.name}" placeholder="${esc(f.placeholder || '')}" ${f.phone ? 'data-phone' : ''} autocomplete="off"
-                         class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
-                </div>`
+              .map((f) =>
+                ui.field({ label: f.label, name: f.name, type: f.type || 'text', placeholder: f.placeholder || '', required: f.required, phone: f.phone, extra: 'autocomplete="off"' })
               )
               .join('')}
-            <small data-error class="label-small text-error-primary" hidden></small>
+            <small data-error class="label-small field__error" hidden></small>
           </div>
         </div>
-        <div class="p-6 md:px-8 flex justify-end gap-3 mt-2 border-t border-gray-100 rounded-b-2xl">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Crear</button>
+        <div class="modal-footer">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">Crear</button>
         </div>
       </div>`,
-      { z: 'z-80', overlayClass: 'bg-gray-500/30' }
+      { layer: 'top' }
     );
     const form = m.el.querySelector('[data-form]');
     const btn = m.el.querySelector('[data-save]');

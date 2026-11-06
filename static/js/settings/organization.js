@@ -10,17 +10,7 @@
 
   // Con el menú lateral colapsado, las dos secciones van lado a lado
   function applyLayout(collapsed) {
-    const wrap = form.querySelector('[data-layout="wrap"]');
-    wrap.className = collapsed ? 'flex flex-col md:flex-row gap-8 md:gap-12' : 'flex flex-col gap-6';
-    form.querySelectorAll('[data-layout="grid"]').forEach(
-      (g) => (g.className = collapsed ? 'flex flex-col gap-5' : 'grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4')
-    );
-    const half = form.querySelector('[data-layout="half"]');
-    half.className = collapsed ? 'w-full' : 'md:col-span-2 md:w-[calc(50%-0.75rem)]';
-    const full = form.querySelector('[data-layout="full"]');
-    full.className = collapsed ? 'w-full' : 'md:col-span-2';
-    const div = form.querySelector('[data-layout="divider"]');
-    div.className = collapsed ? 'bg-gray-200 hidden md:block w-px min-h-full' : 'bg-gray-200 h-px w-full';
+    form.classList.toggle('is-wide', collapsed);
   }
   document.addEventListener('hook:sidebar', (e) => applyLayout(e.detail.collapsed));
 

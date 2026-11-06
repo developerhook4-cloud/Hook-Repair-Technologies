@@ -1,0 +1,26 @@
+/* =========================================================
+   PERFIL — templates/settings/profile.html
+   ========================================================= */
+.profile-form { position: relative; width: 100%; max-width: 1024px; height: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
+.profile-form__sections { display: flex; flex-direction: column; gap: 32px; }
+@media (min-width: 768px) { .profile-form__sections { gap: 48px; } }
+.profile-form__title { margin-bottom: 24px; }
+.profile-form__grid { display: grid; grid-template-columns: 1fr; gap: 16px 24px; }
+@media (min-width: 768px) { .profile-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* "Cambiar contraseña" desplegable */
+.password-toggle {
+  min-width: 240px; display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px; border-radius: 6px; cursor: pointer;
+  background: var(--light-3); color: var(--dark-1); transition: background 0.3s ease-in;
+}
+.password-toggle:hover, .password-toggle:focus { background: var(--light-1); outline: none; }
+.password-toggle__chevron { display: grid; place-items: center; flex-shrink: 0; transition: transform 0.3s; }
+.password-toggle.is-open .password-toggle__chevron { transform: rotate(180deg); }
+.password-panel { max-height: 0; opacity: 0; overflow: hidden; transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out, margin 0.3s; }
+.password-panel.is-open { max-height: 500px; opacity: 1; margin-top: 16px; }
+.password-panel__old { padding-bottom: 24px; }
+
+/* Botón "Guardar cambios" centrado abajo (también en Información de la organización) */
+.form-actions { display: flex; justify-content: center; margin-top: auto; padding: 32px 0; }
+.form-actions__btn { width: 192px; padding-left: 16px; padding-right: 16px; }

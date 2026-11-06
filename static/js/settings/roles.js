@@ -29,7 +29,6 @@
   let activeTab = 'roles';
   let ddRole = null;
 
-  const checkbox = 'w-4.5 h-4.5 rounded border-gray-300 text-brand-primary focus:ring-brand-primary accent-brand-primary';
 
   // ── Permisos ⇄ filas de la interfaz ─────────────────────────────────
   const has = (perms, p) => (perms || []).some((x) => x.toLowerCase() === p.toLowerCase());
@@ -52,11 +51,7 @@
   function paintTabs() {
     document.querySelectorAll('[data-tab]').forEach((t) => {
       const on = t.dataset.tab === activeTab;
-      t.className = `rounded-lg py-2 px-4 w-72 flex flex-col justify-center cursor-pointer transition-colors ${
-        on ? 'bg-brand-primary text-white' : 'bg-gray-50 border border-gray-200 text-gray-500 hover:bg-gray-100'
-      }`;
-      t.querySelector('h4').className = `label-normal font-bold ${on ? 'text-white' : 'text-dark-1'}`;
-      t.querySelector('p').className = `text-xs mt-1 whitespace-nowrap overflow-hidden text-ellipsis ${on ? 'text-white/80' : 'text-gray-400'}`;
+      t.classList.toggle('is-active', on);
     });
     document.getElementById('tabRoles').hidden = activeTab !== 'roles';
     document.getElementById('tabPerms').hidden = activeTab !== 'permisos';
@@ -81,12 +76,12 @@
   const list = ui.cardList(document.getElementById('rolesList'), {
     emptyText: 'No se encontraron roles.',
     rowHtml: (r, last) => `
-      <div class="py-5 flex justify-between items-center ${last ? '' : 'border-b border-gray-200'}">
+      <div class="role-row">
         <div>
-          <h4 class="label-normal font-bold text-dark-1 mb-1">${esc(r.name)}</h4>
-          <p class="body-normal text-gray-400">${esc(displayPerms(r.permissions))}</p>
+          <h4 class="label-normal role-row__name">${esc(r.name)}</h4>
+          <p class="body-normal role-row__perms">${esc(displayPerms(r.permissions))}</p>
         </div>
-        <button type="button" data-action="delete" title="Eliminar" class="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">${ui.icon('trash-can')}</button>
+        <button type="button" data-action="delete" title="Eliminar" class="card-btn card-btn--delete">${ui.icon('trash-can')}</button>
       </div>`,
     onAction: (action, r) => action === 'delete' && openDelete(r),
   });
@@ -99,13 +94,13 @@
   // ── Permisos del rol seleccionado ───────────────────────────────────
   function permRow(item, i, disabled = false) {
     const box = (key, label) => `
-      <label class="flex items-center gap-2 ${disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} transition-opacity duration-200">
-        <input type="checkbox" data-i="${i}" data-k="${key}" ${item[key] ? 'checked' : ''} ${disabled ? 'disabled' : ''} class="${checkbox} ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}" /> ${label}
+      <label class="check perm-row__check${disabled ? ' is-disabled' : ''}">
+        <input type="checkbox" data-i="${i}" data-k="${key}" ${item[key] ? 'checked' : ''} ${disabled ? 'disabled' : ''} /> ${label}
       </label>`;
     return `
-      <div class="border border-gray-200 rounded-2xl p-4 md:px-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors hover:border-gray-300">
-        <h4 class="label-normal font-bold text-dark-1">${esc(item.label)}</h4>
-        <div class="flex items-center gap-6 md:gap-8 body-normal font-semibold text-dark-2">
+      <div class="perm-row">
+        <h4 class="label-normal perm-row__name">${esc(item.label)}</h4>
+        <div class="body-normal perm-row__checks">
           ${box('view', 'Ver')}${box('update', 'Editar')}${box('delete', 'Eliminar')}
         </div>
       </div>`;
@@ -119,7 +114,7 @@
       .filter(([r]) => !term || r.label.toLowerCase().includes(term) || r.module.toLowerCase().includes(term));
     listEl.innerHTML = rows.length
       ? rows.map(([r, i]) => permRow(r, i)).join('')
-      : '<p class="text-center py-8 text-gray-400 body-normal">No hay permisos que coincidan.</p>';
+      : '<p class="body-normal perms-empty">No hay permisos que coincidan.</p>';
     syncPermsSave();
   }
   function syncPermsSave() {
@@ -192,21 +187,21 @@
   function openAdd() {
     const rows = toRows([]);
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-gray-100 animate-fade-in">
-        <div class="p-8 pb-4">
+      <div class="modal-card modal-card--2xl role-modal">
+        <div class="role-modal__head">
           ${ui.modalHeader('Agregar nuevo rol')}
-          <div class="flex flex-col mb-6">
-            <label class="label-normal font-semibold text-dark-1 mb-2">Nombre del rol <span class="text-brand-primary">*</span></label>
+          <div class="role-modal__name">
+            <label class="label-normal field__label">Nombre del rol <span class="req">*</span></label>
             <input type="text" name="name" maxlength="100" placeholder="Introduzca el nombre del rol"
-                   class="w-full md:w-80 border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal placeholder-gray-400" />
+                   class="input role-modal__input" />
           </div>
-          <div class="mb-2 flex flex-col gap-1"><label class="label-normal text-dark-1">Permisos para el nuevo rol <span class="text-brand-primary">*</span></label>
-            <small data-perm-hint class="label-small text-error-primary" hidden>Selecciona al menos un permiso.</small></div>
+          <div class="role-modal__perms-label"><label class="label-normal field__label">Permisos para el nuevo rol <span class="req">*</span></label>
+            <small data-perm-hint class="label-small field__error" hidden>Selecciona al menos un permiso.</small></div>
         </div>
-        <div class="px-8 overflow-y-auto flex-1 flex flex-col gap-3 pb-4" data-perms></div>
-        <div class="p-6 md:px-8 border-t border-gray-100 bg-white flex justify-end gap-4">
-          <button type="button" data-close class="px-6 py-2.5 rounded-lg bg-gray-100 text-dark-2 font-bold label-normal hover:bg-gray-200 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-6 py-2.5 rounded-lg bg-brand-primary text-white font-bold label-normal transition-all shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">Crear rol</button>
+        <div class="role-modal__perms" data-perms></div>
+        <div class="modal-footer">
+          <button type="button" data-close class="btn btn--soft">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">Crear rol</button>
         </div>
       </div>`);
     const name = m.el.querySelector('[name=name]');

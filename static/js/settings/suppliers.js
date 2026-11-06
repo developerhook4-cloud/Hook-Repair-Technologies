@@ -46,10 +46,10 @@
     const s = supplier || {};
     let active = editing ? s.active : true;
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-100 overflow-visible animate-fade-in">
-        <div class="p-6 md:p-8 pb-4">
+      <div class="modal-card modal-card--sm modal-card--visible">
+        <div class="modal-body">
           ${ui.modalHeader(editing ? 'Editar proveedor' : 'Nuevo proveedor')}
-          <div class="flex flex-col gap-5" data-form>
+          <div class="form-stack form-stack--roomy" data-form>
             ${ui.field({ label: 'Nombre', name: 'name', value: s.name, placeholder: 'Ej. Tech Source', required: true })}
             ${ui.field({ label: 'Teléfono', name: 'phone1', value: s.phone1, placeholder: '662 481 9204', required: true, phone: true })}
             ${ui.field({ label: 'Teléfono Alternativo', name: 'phone2', value: s.phone2, placeholder: '662 739 1058', phone: true })}
@@ -57,9 +57,9 @@
             ${editing ? ui.ddField({ label: 'Estado', id: 'ddStatus' }) : ''}
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 mt-4 border-t border-gray-100 rounded-b-2xl">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Guardar cambios</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save class="btn btn--primary">Guardar cambios</button>
         </div>
       </div>`);
     const form = m.el.querySelector('[data-form]');

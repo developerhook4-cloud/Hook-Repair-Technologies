@@ -1,0 +1,60 @@
+/* =========================================================
+   NAVBAR — barra roja superior (templates/partials/navbar.html)
+   La "pestaña" clara que sigue al mouse la mueve core/layout.js.
+   ========================================================= */
+.navbar {
+  position: fixed; top: 0; left: 0; z-index: 50;
+  width: 100%; padding: 8px 16px;
+  background: var(--brand);
+}
+.navbar__inner {
+  width: 100%; margin: 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+}
+@media (min-width: 640px) { .navbar__inner { max-width: 640px; } }
+@media (min-width: 768px) { .navbar__inner { max-width: 768px; } }
+@media (min-width: 1024px) { .navbar { padding: 8px 32px; } .navbar__inner { max-width: 1024px; } }
+@media (min-width: 1280px) { .navbar__inner { max-width: 1280px; } }
+@media (min-width: 1536px) { .navbar__inner { max-width: 1536px; } }
+
+.navbar__tab {
+  position: absolute; z-index: 0; pointer-events: none;
+  background: var(--brand-lighter); border-radius: 8px; box-shadow: var(--shadow-md);
+  transition: all 0.3s ease-in-out;
+}
+
+.navbar__group { display: flex; align-items: center; gap: 8px; }
+.navbar__group--main { flex-wrap: wrap; }
+@media (min-width: 1024px) { .navbar__group { gap: 16px; } }
+
+.navbar__link {
+  position: relative; z-index: 10;
+  padding: 6px 16px;
+  font-size: 16px; line-height: 24px; font-weight: 600;
+  color: var(--light-4); cursor: pointer;
+  transition: color 0.15s var(--ease);
+}
+.navbar__logo img { height: 32px; }
+
+/* ---------- Menú de la cuenta ---------- */
+.navbar__account { position: relative; display: flex; align-items: center; padding: 8px 0; }
+.account-menu { position: absolute; top: 100%; right: 0; display: none; padding-top: 8px; }
+.navbar__account:hover .account-menu,
+.navbar__account:focus-within .account-menu { display: block; }
+
+.account-menu__card { min-width: 288px; padding: 12px; background: var(--white); border-radius: 16px; box-shadow: var(--shadow-card); }
+.account-menu__user { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.account-menu__avatar { width: 28px; height: 28px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--dark-1); }
+.account-menu__info { display: flex; flex-direction: column; }
+.account-menu__name-row { display: flex; align-items: center; gap: 12px; white-space: nowrap; }
+.account-menu__name { font-size: 16px; font-weight: 700; color: var(--dark-1); }
+.account-menu__role { padding: 4px 8px; border-radius: 9999px; background: var(--info-subtle); color: var(--info-darker); font-size: 12px; line-height: 16px; font-weight: 600; }
+.account-menu__email { font-size: 14px; line-height: 20px; color: var(--dark-3); }
+.account-menu__divider { height: 4px; margin-top: 8px; border-top: 1px solid var(--gray-200); }
+.account-menu__link {
+  display: flex; align-items: center; padding: 8px; border-radius: 16px;
+  color: var(--dark-2); font-size: 15px; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.account-menu__divider + li .account-menu__link { margin-top: 8px; }
+.account-menu__link:hover { background: var(--light-3); }
+.account-menu__icon { width: 28px; height: 28px; flex-shrink: 0; margin-right: 12px; display: flex; align-items: center; justify-content: center; }

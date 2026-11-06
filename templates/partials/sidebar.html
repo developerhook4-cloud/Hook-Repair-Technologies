@@ -1,38 +1,36 @@
 {{define "sidebar"}}
-{{/* Menú lateral de Configuración / Inventario (layout.js lo colapsa). */}}
-<aside id="hook-sidebar" class="md:h-full w-[260px] p-6 bg-white rounded-[24px] shadow-sm flex flex-col gap-6 transition-all duration-300 ease-in-out relative overflow-hidden shrink-0 max-md:w-full!">
-  <div data-sb-head class="flex items-center justify-between px-2">
-    <div data-sb-text class="flex items-center gap-3 text-brand-primary font-bold text-xl whitespace-nowrap">
+{{/* Menú lateral de Configuración / Inventario (core/layout.js lo colapsa). */}}
+<aside id="hook-sidebar" class="sidebar">
+  <div class="sidebar__head">
+    <div data-sb-text class="sidebar__title">
       <i class="fa-solid fa-{{.Icon}}"></i>
       <span>{{.Title}}</span>
     </div>
-    <button type="button" data-sidebar-toggle class="text-gray-400 hover:text-dark-1 transition-colors flex items-center justify-center p-2 rounded-lg hover:bg-gray-100" aria-label="Colapsar menú">
-      <i class="fa-solid fa-chevron-left text-sm"></i>
+    <button type="button" data-sidebar-toggle class="sidebar__toggle" aria-label="Colapsar menú">
+      <i class="fa-solid fa-chevron-left"></i>
     </button>
   </div>
 
-  <ul class="flex flex-col gap-2 w-full text-base font-semibold overflow-y-auto">
+  <ul class="sidebar__menu">
     {{range .Items}}
-    <li data-sb-item class="rounded-[16px] overflow-hidden flex flex-col transition-colors {{if .Active}}bg-brand-primary text-white shadow-md{{else}}text-dark-1 hover:bg-gray-50{{end}}">
+    <li data-sb-item class="sidebar__item{{if .Active}} is-active{{end}}">
       {{if .Subs}}
-      <div data-sb-row class="flex items-center cursor-pointer transition-all duration-300 py-4 px-5 justify-between" title="{{.Label}}">
-        <span class="flex items-center gap-4 whitespace-nowrap">
-          <i data-sb-icon class="fa-solid fa-{{.Icon}} text-lg text-center w-5"></i>
+      <div data-sb-row class="sidebar__row" title="{{.Label}}">
+        <span class="sidebar__row-label">
+          <i class="sidebar__icon fa-solid fa-{{.Icon}}"></i>
           <span data-sb-text>{{.Label}}</span>
         </span>
-        <i data-sb-text data-sb-chevron class="fa-solid fa-chevron-{{if .Expanded}}up{{else}}down{{end}} text-sm transition-transform duration-200"></i>
+        <i data-sb-text data-sb-chevron class="sidebar__chevron fa-solid fa-chevron-down{{if .Expanded}} is-open{{end}}"></i>
       </div>
-      <ul data-sb-subs class="flex flex-col font-medium text-[15px] pb-3 whitespace-nowrap" {{if not .Expanded}}hidden{{end}}>
+      <ul data-sb-subs class="sidebar__subs" {{if not .Expanded}}hidden{{end}}>
         {{range .Subs}}
-        <li>
-          <a href="{{.Route}}" class="block mx-3 px-10 py-2 mb-1 rounded-lg transition-colors cursor-pointer {{if .Active}}bg-brand-lighter{{else}}hover:bg-brand-lighter{{end}}">{{.Label}}</a>
-        </li>
+        <li><a href="{{.Route}}" class="sidebar__sub{{if .Active}} is-active{{end}}">{{.Label}}</a></li>
         {{end}}
       </ul>
       {{else}}
-      <a href="{{.Route}}" data-sb-row class="flex items-center cursor-pointer transition-all duration-300 py-4 px-5 justify-between" title="{{.Label}}">
-        <span class="flex items-center gap-4 whitespace-nowrap">
-          <i data-sb-icon class="fa-solid fa-{{.Icon}} text-lg text-center w-5"></i>
+      <a href="{{.Route}}" data-sb-row class="sidebar__row" title="{{.Label}}">
+        <span class="sidebar__row-label">
+          <i class="sidebar__icon fa-solid fa-{{.Icon}}"></i>
           <span data-sb-text>{{.Label}}</span>
         </span>
       </a>

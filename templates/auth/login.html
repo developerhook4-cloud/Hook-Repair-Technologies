@@ -1,57 +1,48 @@
 {{define "login"}}{{template "head" .}}
 <body>
-<div class="h-screen w-full bg-light-4 flex overflow-hidden">
-  <div class="w-full lg:w-1/2 flex flex-col justify-between p-6 md:px-12 md:py-8 h-full">
+<div class="login">
+  <div class="login__side">
     <div>
-      <img src="/static/img/LOGO_RN.svg" alt="Hook Technologies" class="h-12" />
+      <img src="/static/img/LOGO_RN.svg" alt="Hook Technologies" class="login__logo" />
     </div>
 
-    <div class="w-full max-w-90 mx-auto flex flex-col justify-center">
-      <div class="text-center mb-6">
-        <h1 class="heading-3 text-dark-1 mb-1">Login</h1>
-        <p class="body-normal text-dark-2 text-sm">Por favor introduzca sus credenciales para iniciar sesión.</p>
+    <div class="login__box">
+      <div class="login__header">
+        <h1 class="heading-3">Login</h1>
+        <p class="body-normal login__subtitle">Por favor introduzca sus credenciales para iniciar sesión.</p>
       </div>
 
-      <form id="loginForm" class="w-full flex flex-col gap-4" novalidate>
-        <div class="flex flex-col gap-2 w-full">
-          <label for="email" class="label-normal text-dark-1">Email</label>
-          <input id="email" name="email" type="email" autocomplete="username" placeholder="Introduzca su email" required
-                 class="w-full bg-white border border-light-2 rounded-lg p-3 body-normal text-dark-1 outline-none focus:border-brand-primary transition-colors placeholder:text-dark-4" />
-          <small data-error-for="email" class="label-small text-error-primary" hidden></small>
+      <form id="loginForm" class="login__form" novalidate>
+        <div class="form-field">
+          <label for="email" class="label-normal form-field__label">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" placeholder="Introduzca su email" required class="form-field__input" />
+          <small data-error-for="email" class="label-small form-field__error" hidden></small>
         </div>
 
-        <div class="flex flex-col gap-2 w-full">
-          <label for="password" class="label-normal text-dark-1">Contraseña</label>
-          <div class="relative w-full">
+        <div class="form-field">
+          <label for="password" class="label-normal form-field__label">Contraseña</label>
+          <div class="form-field__control">
             <input id="password" name="password" type="password" autocomplete="current-password" placeholder="*****************" required
-                   class="w-full bg-white border border-light-2 rounded-lg p-3 body-normal text-dark-1 outline-none focus:border-brand-primary transition-colors placeholder:text-dark-4 pr-12 tracking-widest" />
-            <button type="button" data-toggle-password aria-label="Mostrar contraseña"
-                    class="absolute right-4 top-1/2 -translate-y-1/2 text-dark-3 hover:text-dark-1 transition-colors flex items-center justify-center">
-              <i class="fa-solid fa-eye-slash text-lg"></i>
+                   class="form-field__input form-field__input--password" />
+            <button type="button" data-toggle-password aria-label="Mostrar contraseña" class="form-field__eye">
+              <i class="fa-solid fa-eye-slash"></i>
             </button>
           </div>
-          <small data-error-for="password" class="label-small text-error-primary" hidden></small>
+          <small data-error-for="password" class="label-small form-field__error" hidden></small>
         </div>
 
-        <p id="loginError" class="label-normal text-error-primary text-center" hidden></p>
+        <p id="loginError" class="label-normal login__error" hidden></p>
 
-        <div class="w-full mt-2">
-          <button id="loginSubmit" type="submit" disabled
-                  class="w-full label-large py-3.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-small px-4 bg-dark-1 hover:bg-dark-1 text-light-4">
-            Iniciar sesión
-          </button>
-        </div>
+        <button id="loginSubmit" type="submit" disabled class="btn btn--dark btn--lg btn--block login__submit">Iniciar sesión</button>
       </form>
     </div>
 
-    <div>
-      <p class="body-normal text-dark-2 text-sm">© 2026 Hook Technologies</p>
-    </div>
+    <p class="body-normal login__footer">© 2026 Hook Technologies</p>
   </div>
 
-  <div class="hidden lg:flex lg:w-1/2 p-4 md:p-6 h-full">
-    <div class="w-full h-full rounded-2xl overflow-hidden bg-dark-1 relative shadow-card flex items-center justify-center">
-      <img src="/static/img/LOGO_BB.svg" alt="Hook Technologies" class="w-1/2 max-w-80 opacity-90" />
+  <div class="login__art">
+    <div class="login__art-card">
+      <img src="/static/img/LOGO_BB.svg" alt="Hook Technologies" />
     </div>
   </div>
 </div>

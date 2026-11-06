@@ -13,9 +13,8 @@
   ];
   const typeLabel = (t) => (TYPES.find((x) => x.value === t) || { label: t }).label;
   const typePill = (t) => {
-    const cls =
-      t === 'Entry' ? 'bg-success-subtle text-success-darker' : t === 'Exit' ? 'bg-error-subtle text-error-primary' : 'bg-warning-subtle text-warning-darker';
-    return `<span class="px-4 py-1.5 rounded-full label-small inline-block font-bold whitespace-nowrap ${cls}">${esc(typeLabel(t))}</span>`;
+    const cls = t === 'Entry' ? 'pill--success' : t === 'Exit' ? 'pill--danger' : 'pill--warning';
+    return `<span class="label-small pill pill--bold ${cls}">${esc(typeLabel(t))}</span>`;
   };
   let products = [];
 
@@ -59,32 +58,32 @@
   function openCreate() {
     const cur = { productId: null, type: null };
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col border border-gray-100 overflow-visible animate-fade-in">
-        <div class="p-6 md:p-8 pb-4">
+      <div class="modal-card modal-card--lg modal-card--visible">
+        <div class="modal-body">
           ${ui.modalHeader('Nuevo movimiento')}
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5" data-form>
+          <div class="form-grid form-grid--roomy" data-form>
             ${ui.ddField({ label: 'Producto', id: 'ddProduct', required: true })}
             ${ui.ddField({ label: 'Tipo de movimiento', id: 'ddType', required: true })}
-            <div class="flex flex-col gap-1.5">
-              <label class="label-normal font-semibold text-dark-1">Cantidad <span class="text-brand-primary">*</span></label>
+            <div class="field">
+              <label class="label-normal field__label">Cantidad <span class="req">*</span></label>
               <input type="number" name="quantity" step="1" value="" placeholder="0"
-                     class="w-full border border-gray-300 rounded-[14px] px-4 py-2 focus:outline-none focus:border-brand-primary body-normal font-bold text-dark-1 bg-white" />
-              <span data-hint class="label-small text-gray-400"></span>
+                     class="input input--strong" />
+              <span data-hint class="label-small field__hint"></span>
             </div>
-            <div class="flex flex-col gap-1.5">
-              <label class="label-normal font-semibold text-dark-1">Stock</label>
-              <div data-preview class="w-full border border-gray-200 bg-gray-50 rounded-[14px] px-4 py-2 body-normal text-dark-2">—</div>
+            <div class="field">
+              <label class="label-normal field__label">Stock</label>
+              <div data-preview class="body-normal stock-preview">—</div>
             </div>
-            <div class="flex flex-col gap-1.5 md:col-span-2">
-              <label class="label-normal font-semibold text-dark-1">Motivo (Opcional)</label>
+            <div class="field field--span">
+              <label class="label-normal field__label">Motivo (Opcional)</label>
               <textarea name="reason" rows="2" maxlength="500" placeholder="Ej. Conteo físico, merma, devolución..."
-                        class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 resize-none"></textarea>
+                        class="textarea"></textarea>
             </div>
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 mt-4 border-t border-gray-100 rounded-b-2xl">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Crear movimiento</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">Crear movimiento</button>
         </div>
       </div>`);
     const form = m.el.querySelector('[data-form]');
@@ -101,7 +100,7 @@
       if (product) {
         const delta = isNaN(q) ? 0 : cur.type === 'Exit' ? -q : q;
         const next = product.inStock + (cur.type ? delta : 0);
-        preview.innerHTML = `${product.inStock} → <strong class="${next < 0 ? 'text-error-primary' : 'text-dark-1'}">${next}</strong>`;
+        preview.innerHTML = `${product.inStock} → <strong class="${next < 0 ? 'text-error' : 'text-strong'}">${next}</strong>`;
         if (next < 0) ok = false;
       } else {
         preview.textContent = '—';
@@ -117,9 +116,9 @@
     if (!products.length) {
       form.insertAdjacentHTML(
         'afterbegin',
-        `<div class="md:col-span-2 flex items-center gap-3 bg-warning-subtle text-warning-darker rounded-[14px] px-4 py-3 body-normal">
+        `<div class="body-normal notice notice--warning span-all">
            ${ui.icon('circle-info')}
-           <span>Todavía no hay productos. Crea uno en <a href="/inventory/products" class="font-bold underline">Inventario → Productos</a> para poder registrar movimientos.</span>
+           <span>Todavía no hay productos. Crea uno en <a href="/inventory/products">Inventario → Productos</a> para poder registrar movimientos.</span>
          </div>`
       );
     }
@@ -146,29 +145,29 @@
   }
 
   function openDetails(mv) {
-    const item = (label, value) => `<div><span class="label-small text-gray-500 block">${esc(label)}</span><span class="body-normal font-semibold text-dark-1 break-words">${esc(value)}</span></div>`;
+    const item = (label, value) => `<div><span class="label-small detail-label">${esc(label)}</span><span class="body-normal detail-value">${esc(value)}</span></div>`;
     ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden border border-gray-100 animate-fade-in">
-        <div class="p-6 md:px-8 md:pt-8 pb-4 flex justify-between items-start shrink-0 border-b border-gray-100">
-          <div class="flex items-center gap-3"><h2 class="heading-5 text-dark-1">Detalles del movimiento</h2>${typePill(mv.type)}</div>
-          <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors">${ui.icon('xmark', 'text-xl')}</button>
+      <div class="modal-card modal-card--lg modal-card--tall modal-card--clip">
+        <div class="modal-top modal-top--bordered">
+          <div class="modal-top__title"><h2 class="heading-5">Detalles del movimiento</h2>${typePill(mv.type)}</div>
+          <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
         </div>
-        <div class="p-6 md:px-8 overflow-y-auto flex-1 flex flex-col gap-6">
+        <div class="modal-scroll modal-scroll--stack">
           <div>
-            <h3 class="label-normal font-bold text-dark-1 mb-3">Información Principal</h3>
-            <div class="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <h3 class="label-normal section-label section-label--spaced">Información Principal</h3>
+            <div class="detail-grid detail-grid--2">
               ${item('ID', mv.id)}${item('Producto', mv.productName)}${item('Fecha', ui.dateTime(mv.createdAtUtc))}${item('Motivo', mv.reason || 'N/A')}
             </div>
           </div>
           <div>
-            <h3 class="label-normal font-bold text-dark-1 mb-3">Inventario</h3>
-            <div class="grid grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <h3 class="label-normal section-label section-label--spaced">Inventario</h3>
+            <div class="detail-grid detail-grid--3">
               ${item('Cantidad', mv.quantity)}${item('Cantidad anterior', mv.previousStock)}${item('Cantidad nueva', mv.currentStock)}
             </div>
           </div>
         </div>
-        <div class="p-6 bg-gray-50 flex justify-end border-t border-gray-100 shrink-0">
-          <button type="button" data-close class="px-6 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cerrar</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cerrar</button>
         </div>
       </div>`);
   }

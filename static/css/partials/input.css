@@ -1,0 +1,24 @@
+/* =========================================================
+   CAMPO CON ETIQUETA — templates/partials/input.html
+   (formularios de página: Perfil, Información de la organización)
+   ========================================================= */
+.form-field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.form-field__label { color: var(--dark-1); }
+.form-field__req { color: var(--danger); }
+.form-field__control { position: relative; width: 100%; }
+.form-field__input {
+  width: 100%; padding: 12px;
+  background: var(--white); border: 1px solid var(--light-2); border-radius: 8px; outline: none;
+  font-size: 16px; line-height: 24px; color: var(--dark-1);
+  transition: border-color 0.15s;
+}
+.form-field__input::placeholder { color: var(--dark-4); }
+.form-field__input:focus { border-color: var(--brand); }
+.form-field__input--password { padding-right: 48px; letter-spacing: 0.1em; }
+.form-field__eye {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--dark-3); font-size: 18px; transition: color 0.15s;
+}
+.form-field__eye:hover { color: var(--dark-1); }
+.form-field__error { margin-top: 4px; color: var(--error); }

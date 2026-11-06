@@ -16,10 +16,10 @@
   const list = ui.cardList(document.getElementById('list'), {
     emptyText: 'No se encontraron modelos.',
     rowHtml: (m, last) => `
-      <div class="py-4 px-6 flex justify-between items-center transition-colors hover:bg-gray-50 ${last ? '' : 'border-b border-gray-100'}">
-        <div class="flex flex-col gap-0.5">
-          <h4 class="label-normal font-bold text-dark-1">${esc(m.name)}</h4>
-          <p class="body-normal text-gray-400">${esc(m.brandName || 'Sin Marca')}</p>
+      <div class="card-row">
+        <div class="card-row__text">
+          <h4 class="label-normal card-row__title">${esc(m.name)}</h4>
+          <p class="body-normal card-row__sub">${esc(m.brandName || 'Sin Marca')}</p>
         </div>
         ${ui.cardButtons()}
       </div>`,
@@ -45,17 +45,17 @@
     const editing = !!model;
     let brandId = editing ? model.brandId : null;
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-100 overflow-visible animate-fade-in">
-        <div class="p-6 md:p-8 pb-4">
+      <div class="modal-card modal-card--sm catalog-modal--visible">
+        <div class="modal-body">
           ${ui.modalHeader(editing ? 'Editar dispositivo' : 'Agregar dispositivo')}
-          <div class="flex flex-col gap-5">
+          <div class="form-stack">
             ${ui.field({ label: 'Nombre', name: 'name', value: editing ? model.name : '', placeholder: 'Ej. iPhone 16', required: true })}
             ${ui.ddField({ label: 'Marca', id: 'ddBrand', required: true })}
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 mt-4 border-t border-gray-100 rounded-b-2xl">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Guardar cambios</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">Guardar cambios</button>
         </div>
       </div>`);
     const name = m.el.querySelector('[name=name]');

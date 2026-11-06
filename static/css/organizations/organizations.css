@@ -1,0 +1,118 @@
+/* =========================================================
+   ORGANIZACIONES — templates/organizations/organizations.html
+   Lista de organizaciones + ficha (detalle) con sus usuarios.
+   ========================================================= */
+.orgs-page { height: 100vh; display: flex; flex-direction: column; gap: 24px; padding: 80px 16px 16px; background: var(--light-2); }
+@media (min-width: 768px) { .orgs-page { flex-direction: row; padding: 96px 24px 24px; } }
+.orgs-page__inner { flex: 1; display: flex; gap: 24px; overflow-y: auto; }
+
+.orgs-panel {
+  width: 100%; height: 100%; overflow: hidden;
+  display: flex; flex-direction: column;
+  padding: 24px; background: var(--light-4); border-radius: 16px; box-shadow: var(--shadow-card);
+  transition: all 0.3s;
+}
+@media (min-width: 768px) { .orgs-panel { padding: 32px; } }
+/* Con una organización abierta: en pantallas chicas se ve solo la ficha */
+.orgs-panel.has-detail { display: none; }
+@media (min-width: 1024px) { .orgs-panel.has-detail { display: flex; width: 66.666%; } }
+
+.orgs-panel__head { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 32px; }
+@media (min-width: 640px) { .orgs-panel__head { flex-direction: row; align-items: center; } }
+.orgs-panel__tools { display: flex; gap: 12px; width: 100%; }
+@media (min-width: 640px) { .orgs-panel__tools { width: auto; } }
+.orgs-panel__add { padding: 14px 16px; }
+.orgs-panel__add-text { display: none; padding-left: 4px; }
+@media (min-width: 640px) { .orgs-panel__add-text { display: inline; } }
+.orgs-panel__table { flex: 1; overflow-y: auto; margin: 0 -4px; padding: 0 4px 16px; }
+
+.orgs-search { position: relative; flex: 1; }
+@media (min-width: 640px) { .orgs-search { width: 256px; } }
+.orgs-search__input { padding-left: 40px; }
+.orgs-search > i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--dark-3); pointer-events: none; }
+
+/* ---------- Tabla ---------- */
+.org-table { overflow-x: auto; background: var(--white); border: 1px solid var(--light-2); border-radius: 12px; box-shadow: var(--shadow-sm); }
+.org-table__table { min-width: 100%; text-align: left; white-space: nowrap; }
+.org-table__thead { background: var(--light-3); color: var(--dark-2); border-bottom: 1px solid var(--light-2); }
+.org-table__th { padding: 12px 24px; font-weight: 600; }
+.org-table__tbody tr + tr { border-top: 1px solid var(--light-2); }
+.org-table__row { cursor: pointer; transition: background 0.15s; }
+.org-table__row:hover, .org-table__row.is-selected { background: var(--light-4); }
+.org-table__td { padding: 16px 24px; color: var(--dark-1); }
+.is-right { text-align: right; }
+.org-table__empty { padding: 32px 24px; text-align: center; color: var(--dark-2); }
+.org-table__actions { display: flex; justify-content: flex-end; gap: 12px; }
+.org-table__btn { color: var(--dark-3); transition: color 0.15s; }
+.org-table__btn--edit:hover { color: var(--info); }
+.org-table__btn--delete:hover { color: var(--error); }
+
+.org-table--compact .org-table__th, .org-table--compact .org-table__td { padding-left: 12px; padding-right: 12px; }
+.org-table--compact .org-table__td.is-text { white-space: normal; overflow-wrap: anywhere; }
+.org-table--compact .org-table__actions { gap: 8px; }
+
+.org-badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 12px; border-radius: 9999px; }
+.org-table--compact .org-badge { padding: 2px 8px; }
+.org-badge--on { background: var(--success-subtle); color: var(--success-darker); }
+.org-badge--off { background: var(--error-subtle); color: var(--error-darker); }
+
+/* ---------- Ficha de la organización ---------- */
+.org-detail {
+  position: relative; width: 100%; height: 100%; overflow-y: auto;
+  display: flex; flex-direction: column;
+  padding: 24px; background: var(--light-4); border-radius: 16px; box-shadow: var(--shadow-card);
+  animation: fade-in 0.2s ease-out;
+}
+@media (min-width: 1024px) { .org-detail { width: 33.333%; } }
+.org-detail__close {
+  position: absolute; top: 24px; right: 24px; width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center; color: var(--dark-3); transition: color 0.15s;
+}
+.org-detail__close:hover { color: var(--info); }
+.org-detail__head { margin-bottom: 32px; padding-right: 40px; }
+.org-detail__name { font-size: 24px; line-height: 1.25; font-weight: 700; color: var(--dark-1); }
+.org-detail__info { display: flex; flex-direction: column; gap: 24px; }
+@media (min-width: 1280px) { .org-detail__info { flex-direction: row; } }
+.org-detail__group { display: flex; flex-direction: column; gap: 4px; }
+.org-detail__group > .label-normal { color: var(--dark-1); }
+.org-detail__line { display: flex; align-items: center; gap: 12px; }
+.org-detail__line--top { align-items: flex-start; }
+.org-detail__icon { width: 16px; color: var(--dark-2); }
+.org-detail__line--top .org-detail__icon { margin-top: 4px; }
+
+.org-detail__users-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 0; }
+.org-detail__users-title { font-weight: 700; color: var(--dark-1); }
+.org-detail__add { padding: 10px 16px; font-size: 16px; line-height: 24px; }
+.org-detail__add-text { display: none; padding-left: 4px; }
+@media (min-width: 640px) { .org-detail__add-text { display: inline; } }
+.org-detail__users { margin-bottom: 32px; background: var(--white); border-radius: 16px; box-shadow: var(--shadow-sm); }
+.org-detail__footer { width: 100%; margin: auto auto 0; padding-top: 16px; border-top: 1px solid var(--light-2); }
+.org-detail__actions { display: flex; flex-direction: column; gap: 12px; }
+@media (min-width: 1280px) { .org-detail__actions { flex-direction: row; } }
+
+/* ---------- Modales de organizaciones ---------- */
+.org-modal { position: relative; border-radius: 24px; }
+.org-modal__head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--gray-100); }
+.org-modal__title { font-size: 20px; line-height: 28px; font-weight: 700; color: #111827; }
+.org-modal__close {
+  width: 32px; height: 32px; border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+  color: var(--gray-400); font-size: 18px; transition: color 0.15s, background 0.15s;
+}
+.org-modal__close:hover { color: #1f2937; background: var(--gray-100); }
+.org-modal__body { padding: 24px; max-height: 70vh; overflow-y: auto; }
+.org-modal__form { display: flex; flex-direction: column; gap: 24px; }
+.org-modal__divider { width: 100%; height: 1px; background: var(--gray-200); }
+.org-modal__section-title { margin-bottom: 16px; }
+.org-modal__intro { margin-bottom: 8px; font-size: 14px; line-height: 20px; color: var(--dark-2); }
+.org-modal__hint { margin-top: -8px; }
+.org-modal__buttons { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+.org-modal__buttons--bordered { margin: 16px auto 0; padding-top: 16px; border-top: 1px solid var(--gray-100); width: 100%; }
+
+/* Activar / desactivar organización */
+.org-toggle { display: flex; flex-direction: column; gap: 24px; text-align: center; }
+.org-toggle__icon {
+  width: 64px; height: 64px; margin: 0 auto; border-radius: 9999px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--error-subtle); color: var(--error-darker); font-size: 24px;
+}
+.org-toggle__buttons { display: flex; justify-content: center; gap: 12px; width: 100%; }

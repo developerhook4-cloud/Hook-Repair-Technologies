@@ -15,10 +15,10 @@
   const list = ui.cardList(document.getElementById('list'), {
     emptyText: 'No se encontraron categorías.',
     rowHtml: (c, last) => `
-      <div class="py-4 px-6 flex justify-between items-center transition-colors hover:bg-gray-50 ${last ? '' : 'border-b border-gray-200'}">
-        <div class="flex items-center justify-items-start">
-          <h4 class="label-normal font-bold text-dark-1 mb-1 pr-3">${esc(c.name)}</h4>
-          ${c.icon ? `<i class="${esc(c.icon)} text-dark-1"></i>` : ''}
+      <div class="card-row">
+        <div class="card-row__main">
+          <h4 class="label-normal card-row__title">${esc(c.name)}</h4>
+          ${c.icon ? `<i class="${esc(c.icon)} card-row__glyph"></i>` : ''}
         </div>
         ${ui.cardButtons()}
       </div>`,
@@ -52,13 +52,13 @@
   function iconPicker(container, initial, onPick) {
     const parts = (initial || '').split('fa-');
     container.innerHTML = `
-      <div class="w-full max-w-sm relative" data-dd>
-        <div class="flex items-center gap-3">
+      <div class="icon-picker" data-dd>
+        <div class="icon-picker__row">
           <input type="text" autocomplete="off" placeholder="Buscar ícono (ej. user, home, trash)..." value="${esc(parts.length > 1 ? parts[1] : '')}"
-                 class="w-full bg-white border border-light-2 rounded-lg p-3 body-normal text-dark-1 outline-none focus:border-brand-primary transition-colors placeholder:text-dark-4" />
-          <span data-preview class="w-10 h-10 shrink-0 rounded-lg bg-gray-50 border border-gray-100 flex items-center justify-center text-xl text-dark-1">${initial ? `<i class="${esc(initial)}"></i>` : ''}</span>
+                 class="form-field__input" />
+          <span data-preview class="icon-picker__preview">${initial ? `<i class="${esc(initial)}"></i>` : ''}</span>
         </div>
-        <div data-grid class="absolute bottom-full left-0 mb-2 w-full bg-white border border-gray-100 shadow-lg rounded-xl max-h-40 overflow-y-auto z-50 p-2 grid grid-cols-4 gap-2" hidden></div>
+        <div data-grid class="icon-picker__grid" hidden></div>
       </div>`;
     const input = container.querySelector('input');
     const grid = container.querySelector('[data-grid]');
@@ -72,9 +72,9 @@
       grid.innerHTML = found
         .map(
           (i) => `<button type="button" data-icon="${i.style} fa-${i.name}" title="${esc(i.name)}"
-                    class="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-brand-primary hover:text-white transition-colors text-gray-600">
-                    <i class="${i.style} fa-${i.name} text-xl mb-1"></i>
-                    <span class="text-[10px] truncate w-full text-center">${esc(i.name)}</span>
+                    class="icon-picker__option">
+                    <i class="${i.style} fa-${i.name}"></i>
+                    <span>${esc(i.name)}</span>
                   </button>`
         )
         .join('');
@@ -106,22 +106,22 @@
     const editing = !!category;
     let icon = editing ? category.icon : '';
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-visible border border-gray-100 animate-fade-in">
-        <div class="p-8 md:p-12 pb-4">
+      <div class="modal-card modal-card--2xl catalog-modal catalog-modal--visible">
+        <div class="catalog-modal__body catalog-modal__body--roomy">
           ${ui.modalHeader(editing ? 'Editar categoría' : 'Agregar nueva categoría')}
-          <div class="flex flex-col mb-6">
-            <label class="label-normal font-semibold text-dark-1 mb-2">Nombre de la categoría <span class="text-brand-primary">*</span></label>
+          <div class="catalog-modal__field">
+            <label class="label-normal field__label">Nombre de la categoría <span class="req">*</span></label>
             <input type="text" name="name" value="${esc(editing ? category.name : '')}" placeholder="Introduzca el nombre de la categoría" maxlength="150"
-                   class="w-full md:w-80 border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal placeholder-gray-400" />
+                   class="input catalog-modal__input" />
           </div>
-          <div class="flex flex-col mb-6">
-            <label class="label-normal font-semibold text-dark-1 mb-2">Ícono para la categoría</label>
+          <div class="catalog-modal__field">
+            <label class="label-normal field__label">Ícono para la categoría</label>
             <div data-icon-picker></div>
           </div>
         </div>
-        <div class="p-6 md:px-8 border-t border-gray-100 bg-white flex justify-end gap-4 mt-auto rounded-b-2xl">
-          <button type="button" data-close class="px-6 py-2.5 rounded-lg bg-gray-100 text-dark-2 font-bold label-normal hover:bg-gray-200 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-6 py-2.5 rounded-lg bg-brand-primary text-white font-bold label-normal transition-all shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">${editing ? 'Guardar cambios' : 'Agregar categoría'}</button>
+        <div class="modal-footer">
+          <button type="button" data-close class="btn btn--soft">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">${editing ? 'Guardar cambios' : 'Agregar categoría'}</button>
         </div>
       </div>`);
     const name = m.el.querySelector('[name=name]');

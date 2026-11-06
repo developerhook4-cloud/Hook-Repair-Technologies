@@ -36,9 +36,7 @@
   const toItems = (arr, current) => (current && !arr.includes(current) ? [current, ...arr] : arr).map((v) => ({ value: v, label: v }));
 
   const typePill = (t) =>
-    `<span class="px-4 py-1.5 rounded-full label-small font-bold inline-block whitespace-nowrap ${
-      t === 1 ? 'bg-blue-100 text-blue-500' : 'bg-orange-100 text-orange-500'
-    }">${t === 1 ? 'Distribuidor' : 'Cliente'}</span>`;
+    `<span class="label-small pill client-type ${t === 1 ? 'client-type--distributor' : 'client-type--public'}">${t === 1 ? 'Distribuidor' : 'Cliente'}</span>`;
 
   const state = ui.listState({
     perPage: 5,
@@ -75,16 +73,16 @@
   }
 
   const input = (label, name, value, placeholder, { required = false, small = false, type = 'text', phone = false } = {}) => `
-    <div class="flex flex-col gap-1.5">
-      <label class="${small ? 'label-small text-dark-2' : 'label-normal font-semibold text-dark-1'}">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
+    <div class="field">
+      <label class="${small ? 'label-small field__label--small' : 'label-normal field__label'}">${esc(label)}${required ? ' <span class="req">*</span>' : ''}</label>
       <input type="${type}" name="${name}" value="${esc(value || '')}" placeholder="${esc(placeholder)}" ${phone ? 'data-phone' : ''}
-             class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 placeholder-gray-300" />
-      <small data-error-for="${name}" class="label-small text-error-primary" hidden></small>
+             class="input" />
+      <small data-error-for="${name}" class="label-small field__error" hidden></small>
     </div>`;
 
   const dd = (label, id, small = false) => `
-    <div class="flex flex-col gap-1.5">
-      <label class="${small ? 'label-small text-dark-2' : 'label-normal text-dark-1'}">${esc(label)}</label>
+    <div class="field">
+      <label class="${small ? 'label-small field__label--small' : 'label-normal field__label'}">${esc(label)}</label>
       <div id="${id}"></div>
     </div>`;
 
@@ -101,53 +99,53 @@
     };
 
     const m = ui.modal(`
-      <div data-card class="bg-white rounded-2xl shadow-2xl w-full flex flex-col max-h-[85vh] overflow-hidden border border-gray-100 transition-all duration-300 animate-fade-in">
-        <div class="p-6 md:px-8 md:pt-8 pb-4 flex justify-between items-start shrink-0">
-          <h2 class="heading-5 text-dark-1">${editing ? 'Editar cliente' : 'Agregar nuevo cliente'}</h2>
-          <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors">${ui.icon('xmark', 'text-xl')}</button>
+      <div data-card class="modal-card modal-card--tall modal-card--clip client-modal">
+        <div class="modal-top">
+          <h2 class="heading-5">${editing ? 'Editar cliente' : 'Agregar nuevo cliente'}</h2>
+          <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
         </div>
-        <div class="px-6 md:px-8 pb-6 overflow-y-auto flex-1" data-form>
-          <div class="flex flex-col md:flex-row gap-10">
-            <div class="flex flex-col gap-5 flex-1">
+        <div class="modal-scroll" data-form>
+          <div class="client-modal__cols">
+            <div class="form-stack form-stack--roomy client-modal__col">
               ${input('Nombre', 'name', c.name, 'Introduzca el nombre del cliente', { required: true })}
               ${input('Número de teléfono', 'phone1', c.phone1, '662 123 4567', { required: true, phone: true })}
-              <div class="flex flex-col gap-1.5">
-                <label class="label-normal font-semibold text-dark-1">Tipo de cliente <span class="text-brand-primary">*</span></label>
+              <div class="field">
+                <label class="label-normal field__label">Tipo de cliente <span class="req">*</span></label>
                 <div id="ddType"></div>
               </div>
-              <div class="flex flex-col gap-3 mt-2">
-                <label class="flex items-center gap-2 cursor-pointer label-normal text-dark-1">
-                  <input type="checkbox" name="requiresInvoice" ${c.rfc || c.taxRegime ? 'checked' : ''} class="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary accent-brand-primary cursor-pointer" />
+              <div class="client-modal__invoice">
+                <label class="label-normal check">
+                  <input type="checkbox" name="requiresInvoice" ${c.rfc || c.taxRegime ? 'checked' : ''} class="checkbox" />
                   Requiere facturar
                 </label>
-                <div data-invoice class="flex flex-col gap-4 transition-all duration-300" ${c.rfc || c.taxRegime ? '' : 'hidden'}>
-                  <div class="flex flex-col gap-1.5">
-                    <label class="label-normal text-dark-1">RFC <span class="text-brand-primary">*</span></label>
-                    <input type="text" name="rfc" maxlength="13" value="${esc(c.rfc || '')}" placeholder="Ej. XAXX010101000" class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 placeholder-gray-300 uppercase" />
-                    <small data-error-for="rfc" class="label-small text-error-primary" hidden></small>
-                    <span class="label-small text-gray-400">12 caracteres (persona moral) o 13 (persona física).</span>
+                <div data-invoice class="form-stack" ${c.rfc || c.taxRegime ? '' : 'hidden'}>
+                  <div class="field">
+                    <label class="label-normal field__label">RFC <span class="req">*</span></label>
+                    <input type="text" name="rfc" maxlength="13" value="${esc(c.rfc || '')}" placeholder="Ej. XAXX010101000" class="input input--upper" />
+                    <small data-error-for="rfc" class="label-small field__error" hidden></small>
+                    <span class="label-small field__hint">12 caracteres (persona moral) o 13 (persona física).</span>
                   </div>
                   ${dd('Régimen fiscal *', 'ddTax')}
                   ${dd('Uso de CFDI (tipo de gasto) *', 'ddExpense')}
-                  <small data-invoice-error class="label-small text-error-primary" hidden></small>
+                  <small data-invoice-error class="label-small field__error" hidden></small>
                 </div>
               </div>
               ${editing ? dd('Estado', 'ddStatus') : ''}
             </div>
 
-            <div data-distributor class="flex-1 flex flex-col gap-6 animate-fade-in border-t md:border-t-0 md:border-l border-gray-100 md:pl-10 pt-6 md:pt-0" hidden>
-              <div class="flex flex-col gap-4">
-                <h3 class="label-normal font-bold text-dark-1">Datos de distribuidor</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div data-distributor class="client-modal__col client-modal__distributor" hidden>
+              <div class="form-stack">
+                <h3 class="label-normal section-label">Datos de distribuidor</h3>
+                <div class="form-grid">
                   ${input('Nombre comercial', 'legalName', c.legalName, 'Introduzca el nombre del local', { small: true })}
                   ${input('Celular', 'phone2', c.phone2, '662 123 4567', { small: true, phone: true })}
                   ${input('Nombre del titular', 'titularName', c.titularName, 'Introduzca el nombre del titular', { small: true })}
                   ${input('Email', 'email', c.email, 'cliente@email.com', { small: true, type: 'email' })}
                 </div>
               </div>
-              <div class="flex flex-col gap-4">
-                <h3 class="label-normal font-bold text-dark-1">Dirección</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="form-stack">
+                <h3 class="label-normal section-label">Dirección</h3>
+                <div class="form-grid">
                   ${input('Dirección', 'address', addr.address, 'Av Nombre 100', { small: true })}
                   ${input('Código Postal', 'postCode', addr.postCode, '12345', { small: true })}
                   ${input('Ciudad', 'city', addr.city, 'Elegir ciudad', { small: true })}
@@ -158,9 +156,9 @@
             </div>
           </div>
         </div>
-        <div data-footer class="p-6 md:px-8 bg-white flex justify-between md:justify-end gap-3 shrink-0">
-          <button type="button" data-close class="w-full md:w-auto px-6 py-2.5 rounded-[14px] bg-gray-100 text-dark-2 label-normal font-bold hover:bg-gray-200 transition-colors">Cancelar</button>
-          <button type="button" data-save class="w-full md:w-auto px-6 py-2.5 rounded-[14px] bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">${editing ? 'Guardar cambios' : 'Crear cliente'}</button>
+        <div data-footer class="client-modal__footer">
+          <button type="button" data-close class="btn btn--soft btn--round client-modal__btn">Cancelar</button>
+          <button type="button" data-save class="btn btn--primary btn--round client-modal__btn">${editing ? 'Guardar cambios' : 'Crear cliente'}</button>
         </div>
       </div>`);
 
@@ -173,8 +171,7 @@
     const applyType = () => {
       const isDist = cur.type === 1;
       distributor.hidden = !isDist;
-      card.classList.toggle('max-w-250', isDist);
-      card.classList.toggle('max-w-112.5', !isDist);
+      card.classList.toggle('is-distributor', isDist);
     };
 
     ui.dropdown(m.el.querySelector('#ddType'), {

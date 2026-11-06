@@ -1,27 +1,27 @@
 {{define "settings-organization"}}{{template "layout-start" .}}
-<div class="flex-1 min-h-0 flex flex-col bg-white rounded-2xl p-6 md:p-10 shadow-sm overflow-y-auto relative">
-  <form id="orgForm" class="flex flex-col gap-6 w-full relative h-full" novalidate>
-    {{/* org.js cambia estas clases cuando se colapsa el menú lateral */}}
-    <div data-layout="wrap" class="flex flex-col gap-6">
-      <section class="flex-1">
-        <h2 class="heading-5 mb-8">Información general</h2>
-        <div data-layout="grid" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+<div class="page-card">
+  <form id="orgForm" class="org-form" novalidate>
+    {{/* organization.js pone .is-wide cuando se colapsa el menú lateral (secciones lado a lado) */}}
+    <div class="org-form__sections">
+      <section class="org-form__section">
+        <h2 class="heading-5 org-form__title">Información general</h2>
+        <div class="org-form__grid">
           {{template "input" dict "Label" "Nombre" "Name" "name" "Placeholder" "Nombre" "Required" true}}
           {{template "input" dict "Label" "Email" "Name" "email" "Type" "email" "Placeholder" "ejemplo@ejemplo.com" "Required" true}}
           {{template "input" dict "Label" "Teléfono" "Name" "phone" "Placeholder" "662 123 4567" "Phone" true}}
           {{template "input" dict "Label" "Celular" "Name" "phone2" "Placeholder" "662 123 4567" "Phone" true}}
-          <div data-layout="half" class="md:col-span-2 md:w-[calc(50%-0.75rem)]">
+          <div class="org-form__half">
             {{template "input" dict "Label" "Página web" "Name" "website" "Placeholder" "https://www.ejemplo.com"}}
           </div>
         </div>
       </section>
 
-      <div data-layout="divider" class="bg-gray-200 h-px w-full"></div>
+      <div class="org-form__divider"></div>
 
-      <section class="flex-1">
-        <h2 class="heading-5 mb-8">Ubicación</h2>
-        <div data-layout="grid" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-          <div data-layout="full" class="md:col-span-2">
+      <section class="org-form__section">
+        <h2 class="heading-5 org-form__title">Ubicación</h2>
+        <div class="org-form__grid">
+          <div class="org-form__full">
             {{template "input" dict "Label" "Dirección" "Name" "address" "Placeholder" "Ingresa la calle, número y colonia"}}
           </div>
           {{template "input" dict "Label" "Ciudad" "Name" "city" "Placeholder" "Ingresa la ciudad"}}
@@ -32,12 +32,8 @@
       </section>
     </div>
 
-    <div class="flex justify-center mt-auto pt-8 pb-8">
-      <div class="w-48">
-        <button id="orgSubmit" type="submit" class="w-full label-large py-3.5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-small px-4 bg-brand-primary hover:bg-brand-darker text-light-4 rounded-full">
-          Guardar cambios
-        </button>
-      </div>
+    <div class="form-actions">
+      <button id="orgSubmit" type="submit" class="btn btn--primary-dark btn--lg btn--pill form-actions__btn">Guardar cambios</button>
     </div>
   </form>
 </div>

@@ -1,0 +1,38 @@
+/* =========================================================
+   CATÁLOGOS — templates/settings/catalogs.html
+   (Categorías, Marcas, Modelos). La lista de tarjetas viene de
+   core/ui.css; aquí los modales y el buscador de íconos.
+   ========================================================= */
+.card-row__glyph { color: var(--dark-1); }
+.card-row__main .card-row__title { margin-bottom: 4px; padding-right: 12px; }
+
+/* Modal de categoría / marca */
+.catalog-modal { overflow: hidden; }
+.catalog-modal--visible { overflow: visible; }
+.catalog-modal__body { padding: 32px 32px 16px; }
+@media (min-width: 768px) { .catalog-modal__body--roomy { padding: 48px 48px 16px; } }
+.catalog-modal__field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+@media (min-width: 768px) { .catalog-modal__input { width: 320px; } }
+.catalog-modal .modal-footer { margin-top: auto; }
+
+/* Buscador de íconos (Font Awesome) */
+.icon-picker { position: relative; width: 100%; max-width: 384px; }
+.icon-picker__row { display: flex; align-items: center; gap: 12px; }
+.icon-picker__preview {
+  width: 40px; height: 40px; flex-shrink: 0; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--gray-50); border: 1px solid var(--gray-100); color: var(--dark-1); font-size: 20px;
+}
+.icon-picker__grid {
+  position: absolute; bottom: 100%; left: 0; z-index: 50; margin-bottom: 8px;
+  width: 100%; max-height: 160px; overflow-y: auto; padding: 8px;
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;
+  background: var(--white); border: 1px solid var(--gray-100); border-radius: 12px; box-shadow: var(--shadow-md);
+}
+.icon-picker__option {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 12px; border-radius: 8px; color: var(--gray-600); transition: background 0.15s, color 0.15s;
+}
+.icon-picker__option:hover { background: var(--brand); color: var(--white); }
+.icon-picker__option i { font-size: 20px; margin-bottom: 4px; }
+.icon-picker__option span { width: 100%; font-size: 10px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

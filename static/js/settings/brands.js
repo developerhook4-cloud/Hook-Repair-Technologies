@@ -15,9 +15,9 @@
   const list = ui.cardList(document.getElementById('list'), {
     emptyText: 'No se encontraron marcas.',
     rowHtml: (b, last) => `
-      <div class="py-4 px-6 flex justify-between items-center transition-colors hover:bg-gray-50 ${last ? '' : 'border-b border-gray-200'}">
-        <div class="flex items-start"><h4 class="label-normal font-bold text-dark-1 mb-1">${esc(b.name)}</h4></div>
-        ${ui.cardButtons('hover:text-gray-600')}
+      <div class="card-row">
+        <h4 class="label-normal card-row__title">${esc(b.name)}</h4>
+        ${ui.cardButtons()}
       </div>`,
     onAction: (action, b) => (action === 'edit' ? openModal(b) : openDelete(b)),
   });
@@ -39,18 +39,18 @@
   function openModal(brand) {
     const editing = !!brand;
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden border border-gray-100 animate-fade-in">
-        <div class="p-8 pb-4">
+      <div class="modal-card modal-card--2xl catalog-modal">
+        <div class="catalog-modal__body">
           ${ui.modalHeader(editing ? 'Editar marca' : 'Agregar nueva marca')}
-          <div class="flex flex-col mb-6">
-            <label class="label-normal font-semibold text-dark-1 mb-2">Nombre de la marca <span class="text-brand-primary">*</span></label>
+          <div class="catalog-modal__field">
+            <label class="label-normal field__label">Nombre de la marca <span class="req">*</span></label>
             <input type="text" name="name" value="${esc(editing ? brand.name : '')}" placeholder="Introduzca el nombre de la marca" maxlength="150"
-                   class="w-full md:w-80 border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal placeholder-gray-400" />
+                   class="input catalog-modal__input" />
           </div>
         </div>
-        <div class="p-6 md:px-8 border-t border-gray-100 bg-white flex justify-end gap-4 mt-auto">
-          <button type="button" data-close class="px-6 py-2.5 rounded-lg bg-gray-100 text-dark-2 font-bold label-normal hover:bg-gray-200 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-6 py-2.5 rounded-lg bg-brand-primary text-white font-bold label-normal transition-all shadow-sm hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed">${editing ? 'Guardar cambios' : 'Crear marca'}</button>
+        <div class="modal-footer">
+          <button type="button" data-close class="btn btn--soft">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">${editing ? 'Guardar cambios' : 'Crear marca'}</button>
         </div>
       </div>`);
     const name = m.el.querySelector('[name=name]');

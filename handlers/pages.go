@@ -42,15 +42,16 @@ type PageData struct {
 	User        *models.SessionUser
 	SessionJSON template.JS
 	Sidebar     *Sidebar
-	Script      string // JS propio de la página (/static/js/...)
-	Heading     string // título para "Próximamente"
+	Script      string   // JS propio de la página (/static/js/...)
+	Styles      []string // CSS propio de la página (/static/css/...)
+	Heading     string   // título para "Próximamente"
 	Path        string
 }
 
 // Can — para usar en los templates: {{if .Can "Inventory.View"}}.
 func (p PageData) Can(permission string) bool { return p.User.Can(permission) }
 
-// settingsMenu — mismo menú que features/configuration/layout.
+// settingsMenu — menú lateral de Configuración.
 func settingsMenu() []SidebarItem {
 	return []SidebarItem{
 		{Label: "Perfil", Icon: "circle-user", Route: "/settings/profile"},
@@ -76,7 +77,7 @@ func settingsMenu() []SidebarItem {
 	}
 }
 
-// inventoryMenu — mismo menú que features/inventory/layout.
+// inventoryMenu — menú lateral de Inventario.
 func inventoryMenu() []SidebarItem {
 	return []SidebarItem{
 		{Label: "Productos", Icon: "box-open", Route: "/inventory/products"},
@@ -127,22 +128,50 @@ func sessionJSON(u *models.SessionUser) template.JS {
 	return template.JS(b)
 }
 
-func newPage(c *gin.Context, title, script string) PageData {
+// pageStyles — CSS de cada template (static/css/ sigue la misma estructura
+// que templates/: un archivo por template).
+var pageStyles = map[string]string{
+	"login":                     "/static/css/auth/login.css",
+	"dashboard":                 "/static/css/dashboard/dashboard.css",
+	"organizations":             "/static/css/organizations/organizations.css",
+	"inventory-products":        "/static/css/inventory/inventory.css",
+	"inventory-movements":       "/static/css/inventory/inventory.css",
+	"inventory-purchase-orders": "/static/css/inventory/inventory.css",
+	"settings-profile":          "/static/css/settings/profile.css",
+	"settings-organization":     "/static/css/settings/organization.css",
+	"settings-roles":            "/static/css/settings/roles.css",
+	"settings-categories":       "/static/css/settings/catalogs.css",
+	"settings-brands":           "/static/css/settings/catalogs.css",
+	"settings-models":           "/static/css/settings/catalogs.css",
+	"settings-services":         "/static/css/settings/tables.css",
+	"settings-clients":          "/static/css/settings/tables.css",
+	"settings-suppliers":        "/static/css/settings/tables.css",
+	"settings-users":            "/static/css/settings/tables.css",
+	"coming-soon":               "/static/css/pages/coming-soon.css",
+	"coming-soon-settings":      "/static/css/pages/coming-soon.css",
+	"coming-soon-inventory":     "/static/css/pages/coming-soon.css",
+}
+
+func newPage(c *gin.Context, tmpl, title, script string) PageData {
 	u := currentUser(c)
-	return PageData{Title: title, User: u, SessionJSON: sessionJSON(u), Script: script, Path: c.Request.URL.Path}
+	p := PageData{Title: title, User: u, SessionJSON: sessionJSON(u), Script: script, Path: c.Request.URL.Path}
+	if css, ok := pageStyles[tmpl]; ok {
+		p.Styles = []string{css}
+	}
+	return p
 }
 
 // Page renderiza una página sin menú lateral.
 func Page(tmpl, title, script string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.HTML(http.StatusOK, tmpl, newPage(c, title, script))
+		c.HTML(http.StatusOK, tmpl, newPage(c, tmpl, title, script))
 	}
 }
 
 // SettingsPage renderiza una página dentro del layout de Configuración.
 func SettingsPage(tmpl, title, script string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		p := newPage(c, title, script)
+		p := newPage(c, tmpl, title, script)
 		p.Sidebar = buildSidebar("Configuración", "gear", settingsMenu(), p.Path, p.User)
 		c.HTML(http.StatusOK, tmpl, p)
 	}
@@ -151,7 +180,7 @@ func SettingsPage(tmpl, title, script string) gin.HandlerFunc {
 // InventoryPage renderiza una página dentro del layout de Inventario.
 func InventoryPage(tmpl, title, script string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		p := newPage(c, title, script)
+		p := newPage(c, tmpl, title, script)
 		p.Sidebar = buildSidebar("Inventario", "boxes-stacked", inventoryMenu(), p.Path, p.User)
 		c.HTML(http.StatusOK, tmpl, p)
 	}
@@ -161,16 +190,17 @@ func InventoryPage(tmpl, title, script string) gin.HandlerFunc {
 // Reportes, y opciones del menú lateral sin página). layout: "", "settings" o "inventory".
 func ComingSoon(heading, layout string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		p := newPage(c, heading, "")
-		p.Heading = heading
 		tmpl := "coming-soon"
+		if layout != "" {
+			tmpl = "coming-soon-" + layout
+		}
+		p := newPage(c, tmpl, heading, "")
+		p.Heading = heading
 		switch layout {
 		case "settings":
 			p.Sidebar = buildSidebar("Configuración", "gear", settingsMenu(), p.Path, p.User)
-			tmpl = "coming-soon-settings"
 		case "inventory":
 			p.Sidebar = buildSidebar("Inventario", "boxes-stacked", inventoryMenu(), p.Path, p.User)
-			tmpl = "coming-soon-inventory"
 		}
 		c.HTML(http.StatusOK, tmpl, p)
 	}
@@ -182,7 +212,7 @@ func LoginPage(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/dashboard")
 		return
 	}
-	c.HTML(http.StatusOK, "login", PageData{Title: "Login", SessionJSON: template.JS("null")})
+	c.HTML(http.StatusOK, "login", PageData{Title: "Login", SessionJSON: template.JS("null"), Styles: []string{pageStyles["login"]}})
 }
 
 // Home — GET /

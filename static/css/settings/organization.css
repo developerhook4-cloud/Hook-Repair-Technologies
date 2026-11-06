@@ -1,0 +1,28 @@
+/* =========================================================
+   INFORMACIÓN DE LA ORGANIZACIÓN — templates/settings/organization.html
+   Con el menú lateral colapsado (.is-wide) las secciones van lado a lado.
+   ========================================================= */
+.org-form { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; gap: 24px; }
+.org-form__sections { display: flex; flex-direction: column; gap: 24px; }
+.org-form__section { flex: 1; }
+.org-form__title { margin-bottom: 32px; }
+.org-form__grid { display: grid; grid-template-columns: 1fr; gap: 16px 24px; }
+.org-form__divider { width: 100%; height: 1px; background: var(--gray-200); }
+@media (min-width: 768px) {
+  .org-form__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .org-form__full { grid-column: 1 / -1; }
+  .org-form__half { grid-column: 1 / -1; width: calc(50% - 12px); }
+}
+
+.org-form.is-wide .org-form__sections { gap: 32px; }
+.org-form.is-wide .org-form__grid { display: flex; flex-direction: column; gap: 20px; }
+.org-form.is-wide .org-form__half, .org-form.is-wide .org-form__full { width: 100%; }
+@media (min-width: 768px) {
+  .org-form.is-wide .org-form__sections { flex-direction: row; gap: 48px; }
+  .org-form.is-wide .org-form__divider { width: 1px; height: auto; min-height: 100%; }
+}
+@media (max-width: 767px) { .org-form.is-wide .org-form__divider { display: none; } }
+
+/* Botón "Guardar cambios" centrado abajo */
+.form-actions { display: flex; justify-content: center; margin-top: auto; padding: 32px 0; }
+.form-actions__btn { width: 192px; padding-left: 16px; padding-right: 16px; }

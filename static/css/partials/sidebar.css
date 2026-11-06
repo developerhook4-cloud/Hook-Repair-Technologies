@@ -1,0 +1,45 @@
+/* =========================================================
+   MENÚ LATERAL — Configuración e Inventario
+   (templates/partials/sidebar.html). core/layout.js pone
+   .is-collapsed para dejar solo los íconos.
+   ========================================================= */
+.sidebar {
+  position: relative; flex-shrink: 0; overflow: hidden;
+  width: 100%; padding: 24px;
+  display: flex; flex-direction: column; gap: 24px;
+  background: var(--white); border-radius: 24px; box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease-in-out;
+}
+@media (min-width: 768px) { .sidebar { width: 260px; height: 100%; } }
+
+.sidebar__head { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; }
+.sidebar__title { display: flex; align-items: center; gap: 12px; color: var(--brand); font-size: 20px; line-height: 28px; font-weight: 700; white-space: nowrap; }
+.sidebar__toggle {
+  display: flex; align-items: center; justify-content: center; padding: 8px; border-radius: 8px;
+  color: var(--gray-400); font-size: 14px; transition: color 0.15s, background 0.15s;
+}
+.sidebar__toggle:hover { color: var(--dark-1); background: var(--gray-100); }
+
+.sidebar__menu { display: flex; flex-direction: column; gap: 8px; width: 100%; overflow-y: auto; font-size: 16px; line-height: 24px; font-weight: 600; }
+.sidebar__item { display: flex; flex-direction: column; overflow: hidden; border-radius: 16px; color: var(--dark-1); transition: background 0.15s, color 0.15s; }
+.sidebar__item:hover { background: var(--gray-50); }
+.sidebar__item.is-active { background: var(--brand); color: var(--white); box-shadow: var(--shadow-md); }
+
+.sidebar__row { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; cursor: pointer; transition: all 0.3s; }
+.sidebar__row-label { display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+.sidebar__icon { width: 20px; font-size: 18px; text-align: center; }
+.sidebar__chevron { font-size: 14px; transition: transform 0.2s; }
+.sidebar__chevron.is-open { transform: rotate(180deg); }
+
+.sidebar__subs { display: flex; flex-direction: column; padding-bottom: 12px; font-size: 15px; font-weight: 500; white-space: nowrap; }
+.sidebar__sub { display: block; margin: 0 12px 4px; padding: 8px 40px; border-radius: 8px; transition: background 0.15s; }
+.sidebar__sub:hover, .sidebar__sub.is-active { background: var(--brand-lighter); }
+
+/* Colapsado: solo íconos */
+@media (min-width: 768px) {
+  .sidebar.is-collapsed { width: 90px; padding: 16px; }
+}
+.sidebar.is-collapsed [data-sb-text] { display: none; }
+.sidebar.is-collapsed .sidebar__head { justify-content: center; margin-top: 8px; padding: 0; }
+.sidebar.is-collapsed .sidebar__row { justify-content: center; padding-left: 0; padding-right: 0; }
+.sidebar.is-collapsed .sidebar__icon { width: auto; }

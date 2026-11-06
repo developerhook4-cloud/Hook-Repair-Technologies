@@ -27,7 +27,7 @@
       { key: 'categoryName', label: 'Categoría', width: 150, sort: 'categoryName', render: (s) => esc(s.categoryName || '-') },
       { key: 'deviceName', label: 'Dispositivo', width: 180, sort: 'deviceName', render: (s) => esc(deviceName(s)), text: deviceName },
       { key: 'retailPrice', label: 'Precio', width: 120, sort: 'price', render: (s) => ui.money(s.retailPrice), text: (s) => ui.money(s.retailPrice) },
-      { key: 'publicPrice', label: 'Precio Público', width: 140, sort: 'publicPrice', cellClass: 'font-bold text-dark-2', render: (s) => ui.money(s.publicPrice), text: (s) => ui.money(s.publicPrice) },
+      { key: 'publicPrice', label: 'Precio Público', width: 140, sort: 'publicPrice', cellClass: 'data-table__td--price', render: (s) => ui.money(s.publicPrice), text: (s) => ui.money(s.publicPrice) },
       { key: 'distributorPrice', label: 'Precio Distribuidor', width: 160, sort: 'distributorPrice', render: (s) => ui.money(s.distributorPrice), text: (s) => ui.money(s.distributorPrice) },
     ],
     actions: () => ui.actionBtn('edit', 'pen', 'Editar') + ui.actionBtn('delete', 'trash-can', 'Eliminar'),
@@ -64,30 +64,30 @@
       modelId: editing ? service.modelId : null,
     };
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden border border-gray-100 animate-fade-in">
-        <div class="p-6 md:px-8 md:pt-8 pb-4 flex justify-between items-start shrink-0">
-          <h2 class="heading-5 text-dark-1">${editing ? 'Editar servicio' : 'Crear servicio'}</h2>
-          <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors">${ui.icon('xmark', 'text-xl')}</button>
+      <div class="modal-card modal-card--lg modal-card--tall modal-card--clip">
+        <div class="modal-top">
+          <h2 class="heading-5">${editing ? 'Editar servicio' : 'Crear servicio'}</h2>
+          <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
         </div>
-        <div class="px-6 md:px-8 pb-6 overflow-y-auto flex-1">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5" data-form>
-            ${ui.field({ label: 'Nombre', name: 'name', value: editing ? service.name : '', placeholder: 'Ej. Cambio de Pantalla', required: true, span: 'md:col-span-2' })}
-            <div class="flex flex-col gap-1.5 md:col-span-2">
-              <label class="label-normal text-dark-1">Descripción (Opcional)</label>
-              <textarea name="description" rows="3" placeholder="Detalles del servicio..." class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1 resize-none">${esc(editing ? service.description : '')}</textarea>
+        <div class="modal-scroll">
+          <div class="form-grid form-grid--roomy" data-form>
+            ${ui.field({ label: 'Nombre', name: 'name', value: editing ? service.name : '', placeholder: 'Ej. Cambio de Pantalla', required: true, span: true })}
+            <div class="field field--span">
+              <label class="label-normal field__label">Descripción (Opcional)</label>
+              <textarea name="description" rows="3" placeholder="Detalles del servicio..." class="textarea">${esc(editing ? service.description : '')}</textarea>
             </div>
             ${ui.ddField({ label: 'Categoría (Opcional)', id: 'ddCategory' })}
             ${ui.ddField({ label: 'Marca (Opcional)', id: 'ddBrand' })}
-            ${ui.ddField({ label: 'Modelo (Opcional)', id: 'ddModel', span: 'md:col-span-2' })}
-            <div class="w-full h-px bg-gray-100 md:col-span-2 my-2"></div>
+            ${ui.ddField({ label: 'Modelo (Opcional)', id: 'ddModel', span: true })}
+            <div class="form-divider"></div>
             ${ui.field({ label: 'Precio', name: 'price', type: 'number', value: editing ? service.retailPrice : '', placeholder: '0.00', required: true, prefix: '$' })}
             ${ui.field({ label: 'Precio Público', name: 'publicPrice', type: 'number', value: editing ? service.publicPrice : '', placeholder: '0.00', required: true, prefix: '$' })}
             ${ui.field({ label: 'Precio Distribuidor', name: 'distributorPrice', type: 'number', value: editing ? service.distributorPrice : '', placeholder: '0.00', required: true, prefix: '$' })}
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 border-t border-gray-100 shrink-0">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Guardar cambios</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">Guardar cambios</button>
         </div>
       </div>`);
 

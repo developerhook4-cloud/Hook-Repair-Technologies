@@ -31,7 +31,7 @@ models/                 consultas SQL por módulo (auth, catálogos, CRM, invent
 handlers/               páginas, API y middlewares (permisos, organización)
 templates/<sección>/    HTML (partials, auth, settings, inventory, organizations…)
 static/js/<sección>/    JS de cada página; static/js/core/ = API, UI y layout
-static/css/app.css      CSS compilado (Tailwind) — no se edita a mano
+static/css/<sección>/    CSS de cada página (misma estructura que templates/)
 ```
 
 ## Base de datos
@@ -60,13 +60,18 @@ la app agrega sola las columnas nuevas (`db/schema.go → migrate`).
 
 ## Estilos
 
-`static/css/app.css` ya viene compilado; si agregas clases nuevas de Tailwind en
-`templates/` o `static/js/`, regenéralo:
+CSS escrito a mano, sin frameworks ni compilación (igual que Avante):
 
-```bash
-npm i -D @tailwindcss/cli@4 tailwindcss@4
-npx @tailwindcss/cli -i static/css/tailwind.input.css -o static/css/app.css --minify
 ```
+static/css/base.css              tipografías, colores (variables :root), reset y estilos de texto
+static/css/partials/             navbar, menú lateral, estructura, encabezado de listas, campos
+static/css/core/ui.css           componentes de static/js/core/ui.js (botones, modales, tablas…)
+static/css/<sección>/<pág>.css   lo propio de cada template (auth/login.css, settings/roles.css…)
+```
+
+Cada página carga `base.css`, los `partials/`, `core/ui.css` y su propio archivo
+(se asigna en `handlers/pages.go → pageStyles`). Los colores están en variables
+(`--brand`, `--dark-1`, `--gray-200`…) en `base.css`.
 
 ## API
 

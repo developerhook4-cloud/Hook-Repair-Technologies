@@ -18,12 +18,8 @@
   let open = false;
   const setOpen = (v) => {
     open = v;
-    panel.classList.toggle('max-h-0', !open);
-    panel.classList.toggle('opacity-0', !open);
-    panel.classList.toggle('max-h-125', open);
-    panel.classList.toggle('mt-4', open);
-    panel.classList.toggle('opacity-100', open);
-    toggle.querySelector('[data-chevron]').classList.toggle('rotate-180', open);
+    panel.classList.toggle('is-open', open);
+    toggle.classList.toggle('is-open', open);
   };
   toggle.addEventListener('click', () => setOpen(!open));
   toggle.addEventListener('keydown', (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setOpen(!open)));

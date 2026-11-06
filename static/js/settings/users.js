@@ -42,10 +42,10 @@
   }
 
   const plain = (label, name, value, placeholder, type = 'text') => `
-    <div class="flex flex-col gap-1.5">
-      <label class="label-normal text-dark-1">${label}</label>
+    <div class="field">
+      <label class="label-normal field__label">${label}</label>
       <input type="${type}" name="${name}" value="${ui.esc(value || '')}" placeholder="${ui.esc(placeholder)}" autocomplete="off"
-             class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
+             class="input" />
     </div>`;
 
   function openModal(user) {
@@ -53,31 +53,31 @@
     const u = user || {};
     const cur = { roleId: editing ? u.roleId : null, active: editing ? u.active : true };
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col border border-gray-100 overflow-visible animate-fade-in">
-        <div class="p-6 md:p-8 pb-4">
+      <div class="modal-card modal-card--sm modal-card--visible">
+        <div class="modal-body">
           ${ui.modalHeader(editing ? 'Editar usuario' : 'Crear usuario')}
-          <div class="flex flex-col gap-5" data-form>
+          <div class="form-stack form-stack--roomy" data-form>
             ${plain('Nombre', 'name', u.name, 'Nombre del empleado')}
             ${plain('Email', 'email', u.email, 'email@empresa.com', 'email')}
-            <div class="flex flex-col gap-1.5">
-              <label class="label-normal text-dark-1">${editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
+            <div class="field">
+              <label class="label-normal field__label">${editing ? 'Nueva contraseña (opcional)' : 'Contraseña'}</label>
               <input type="password" name="password" placeholder="${editing ? 'Déjala vacía para no cambiarla' : 'Introduzca una contraseña'}" autocomplete="new-password"
-                     class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
-              <span data-pass-hint class="label-small text-gray-400">${ui.PASSWORD_HINT}</span>
+                     class="input" />
+              <span data-pass-hint class="label-small field__hint">${ui.PASSWORD_HINT}</span>
             </div>
-            <div class="flex flex-col gap-1.5">
-              <label class="label-normal text-dark-1">Confirmar contraseña</label>
+            <div class="field">
+              <label class="label-normal field__label">Confirmar contraseña</label>
               <input type="password" name="confirmPassword" placeholder="Confirme la contraseña" autocomplete="new-password"
-                     class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
-              <span data-mismatch class="label-small text-error-primary" hidden>Las contraseñas no coinciden.</span>
+                     class="input" />
+              <span data-mismatch class="label-small field__error" hidden>Las contraseñas no coinciden.</span>
             </div>
             ${ui.ddField({ label: 'Rol', id: 'ddRole' })}
             ${editing ? ui.ddField({ label: 'Estado', id: 'ddStatus' }) : ''}
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 mt-4 border-t border-gray-100 rounded-b-2xl">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">Guardar cambios</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save class="btn btn--primary">Guardar cambios</button>
         </div>
       </div>`);
     const form = m.el.querySelector('[data-form]');
@@ -90,7 +90,7 @@
       const passErr = f.password ? ui.passwordError(f.password) : '';
       const hint = form.querySelector('[data-pass-hint]');
       hint.textContent = passErr || ui.PASSWORD_HINT;
-      hint.className = `label-small ${passErr ? 'text-error-primary' : 'text-gray-400'}`;
+      hint.className = `label-small ${passErr ? 'field__error' : 'field__hint'}`;
       const passOk = editing && !f.password ? !f.confirmPassword : !!f.password && !passErr && f.password === f.confirmPassword;
       return f.name.trim() !== '' && emailRe.test(f.email.trim()) && !!cur.roleId && passOk;
     };

@@ -1,0 +1,31 @@
+/* =========================================================
+   LISTAS — templates/partials/list.html
+   Tarjeta blanca de cada página, título, buscador y botón "Agregar".
+   ========================================================= */
+.page-card {
+  position: relative; flex: 1; min-height: 0;
+  display: flex; flex-direction: column;
+  padding: 24px; overflow-y: auto; scroll-behavior: smooth;
+  background: var(--white); border-radius: 16px; box-shadow: var(--shadow-sm);
+}
+@media (min-width: 768px) { .page-card { padding: 40px; } }
+.page-card__inner { width: 100%; flex: 1; display: flex; flex-direction: column; }
+
+.page-title { margin-bottom: 32px; color: var(--dark-1); }
+
+.list-toolbar { display: flex; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
+@media (min-width: 640px) { .list-toolbar { flex-direction: row; align-items: center; } }
+.list-toolbar__add { width: 100%; }
+@media (min-width: 640px) { .list-toolbar__add { width: auto; } }
+
+/* Buscador con lupa */
+.search-box { position: relative; width: 100%; }
+@media (min-width: 768px) { .search-box { width: 320px; } }
+@media (min-width: 640px) { .search-box--wide { width: 380px; } }
+.search-box > i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--gray-400); pointer-events: none; }
+.search-box input {
+  width: 100%; padding: 10px 16px 10px 40px;
+  border: 1px solid var(--gray-200); border-radius: 9999px; box-shadow: var(--shadow-sm);
+  font-size: 16px; line-height: 24px; color: var(--dark-1); outline: none;
+}
+.search-box input:focus { border-color: var(--brand); }

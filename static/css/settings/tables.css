@@ -1,0 +1,33 @@
+/* =========================================================
+   TABLAS DE CONFIGURACIÓN — templates/settings/tables.html
+   (Servicios, Clientes, Proveedores, Empleados). La tabla y los
+   modales base vienen de core/ui.css; aquí lo propio de cada uno.
+   ========================================================= */
+.data-table__td--price { font-weight: 700; color: var(--dark-2); }
+
+/* Tipo de cliente */
+.client-type { font-weight: 700; }
+.client-type--distributor { background: #dbeafe; color: #3b82f6; }
+.client-type--public { background: #ffedd5; color: #f97316; }
+
+/* Modal de cliente: angosto, y ancho con la sección de distribuidor */
+.client-modal { max-width: 450px; transition: max-width 0.3s; }
+.client-modal.is-distributor { max-width: 1000px; }
+.client-modal__cols { display: flex; flex-direction: column; gap: 40px; }
+@media (min-width: 768px) { .client-modal__cols { flex-direction: row; } }
+.client-modal__col { flex: 1; }
+.client-modal__invoice { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+.client-modal__distributor {
+  display: flex; flex-direction: column; gap: 24px;
+  padding-top: 24px; border-top: 1px solid var(--gray-100);
+  animation: fade-in 0.2s ease-out;
+}
+@media (min-width: 768px) {
+  .client-modal__distributor { padding: 0 0 0 40px; border-top: 0; border-left: 1px solid var(--gray-100); }
+}
+.client-modal__footer { flex-shrink: 0; display: flex; justify-content: space-between; gap: 12px; padding: 24px; background: var(--white); }
+@media (min-width: 768px) { .client-modal__footer { justify-content: flex-end; padding: 24px 32px; } }
+.client-modal__btn { width: 100%; padding-left: 24px; padding-right: 24px; }
+@media (min-width: 768px) { .client-modal__btn { width: auto; } }
+.field__label--small { color: var(--dark-2); }
+.input--upper { text-transform: uppercase; }

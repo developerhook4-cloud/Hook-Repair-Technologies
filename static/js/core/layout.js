@@ -48,24 +48,9 @@
 
     const setCollapsed = (collapsed) => {
       sb.dataset.collapsed = collapsed ? '1' : '';
-      sb.classList.toggle('w-[90px]', collapsed);
-      sb.classList.toggle('p-4', collapsed);
-      sb.classList.toggle('w-[260px]', !collapsed);
-      sb.classList.toggle('p-6', !collapsed);
-      sb.querySelectorAll('[data-sb-text]').forEach((el) => (el.hidden = collapsed));
-      sb.querySelector('[data-sb-head]').classList.toggle('justify-center', collapsed);
-      sb.querySelector('[data-sb-head]').classList.toggle('mt-2', collapsed);
-      sb.querySelector('[data-sb-head]').classList.toggle('justify-between', !collapsed);
-      sb.querySelector('[data-sb-head]').classList.toggle('px-2', !collapsed);
-      sb.querySelectorAll('[data-sb-row]').forEach((row) => {
-        row.classList.toggle('justify-center', collapsed);
-        row.classList.toggle('px-0', collapsed);
-        row.classList.toggle('px-5', !collapsed);
-        row.classList.toggle('justify-between', !collapsed);
-      });
-      sb.querySelectorAll('[data-sb-icon]').forEach((i) => i.classList.toggle('w-5', !collapsed));
+      sb.classList.toggle('is-collapsed', collapsed);
       if (collapsed) groups.forEach((g) => setExpanded(g, false));
-      toggle.innerHTML = `<i class="fa-solid fa-chevron-${collapsed ? 'right' : 'left'} text-sm"></i>`;
+      toggle.innerHTML = `<i class="fa-solid fa-chevron-${collapsed ? 'right' : 'left'}"></i>`;
       document.dispatchEvent(new CustomEvent('hook:sidebar', { detail: { collapsed } }));
     };
 
@@ -74,7 +59,7 @@
       if (!subs) return;
       subs.hidden = !expanded;
       const chev = g.querySelector('[data-sb-chevron]');
-      if (chev) chev.className = `fa-solid fa-chevron-${expanded ? 'up' : 'down'} text-sm transition-transform duration-200`;
+      if (chev) chev.classList.toggle('is-open', expanded);
     };
 
     toggle.addEventListener('click', () => setCollapsed(!sb.dataset.collapsed));

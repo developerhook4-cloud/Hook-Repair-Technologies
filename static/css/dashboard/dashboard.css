@@ -1,0 +1,5 @@
+/* =========================================================
+   DASHBOARD — templates/dashboard/dashboard.html
+   ========================================================= */
+.dashboard { min-height: 100vh; width: 100%; display: flex; flex-direction: column; background: var(--light-4); }
+.dashboard__main { flex: 1; display: flex; align-items: center; justify-content: center; }

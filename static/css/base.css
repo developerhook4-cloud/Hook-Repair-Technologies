@@ -1,0 +1,133 @@
+/* =========================================================
+   HOOK REPAIR — base de todas las páginas
+   Tipografías, colores (variables), reset y estilos de texto.
+   Cada página agrega sus propios archivos:
+     partials/  → navbar, menú lateral, encabezados de listas, campos
+     core/ui.css → componentes de static/js/core/ui.js (modales, tablas…)
+     <sección>/<página>.css → lo propio de cada página
+   ========================================================= */
+
+/* ---------- Tipografías ---------- */
+@font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url('/static/fonts/Inter-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url('/static/fonts/Inter-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url('/static/fonts/Inter-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Mulish'; font-weight: 400; font-display: swap; src: url('/static/fonts/Mulish-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Mulish'; font-weight: 600; font-display: swap; src: url('/static/fonts/Mulish-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Mulish'; font-weight: 700; font-display: swap; src: url('/static/fonts/Mulish-Bold.woff2') format('woff2'); }
+
+/* ---------- Colores y medidas ---------- */
+:root {
+  --brand: #f1314c;
+  --brand-lighter: #fb6257;
+  --brand-darker: #9b1732;
+  --brand-subtle: #eecdcc;
+  --brand-soft: #fef2f2;
+
+  --error: #d92b49;
+  --error-lighter: #f36a73;
+  --error-darker: #952534;
+  --error-subtle: #e4c7c6;
+  --danger: #ef4444;
+
+  --warning: #efca38;
+  --warning-lighter: #eed26f;
+  --warning-darker: #dca115;
+  --warning-subtle: #f5deb7;
+
+  --success: #00b43e;
+  --success-lighter: #6cd88a;
+  --success-darker: #008b33;
+  --success-subtle: #c4efcd;
+
+  --info: #0086f0;
+  --info-lighter: #61a2ec;
+  --info-darker: #005cbc;
+  --info-subtle: #a0c5e3;
+
+  --dark-1: #3a3a3c;
+  --dark-2: #6b7588;
+  --dark-3: #8f90a6;
+  --dark-4: #c7c9d9;
+
+  --light-1: #dde5e9;
+  --light-2: #ebebf0;
+  --light-3: #f2f2f5;
+  --light-4: #fafafc;
+
+  --white: #ffffff;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+
+  --font-heading: 'Inter', sans-serif;
+  --font-label: 'Mulish', sans-serif;
+
+  --shadow-card: 0 4px 4px 0 rgba(0, 0, 0, 0.25);
+  --shadow-small: 0 2px 2px 0 rgba(0, 0, 0, 0.25);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  --shadow-menu: 0 4px 20px rgba(0, 0, 0, 0.1);
+
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; border: 0 solid; }
+html { -webkit-text-size-adjust: 100%; line-height: 1.5; }
+body {
+  font-family: var(--font-label);
+  color: var(--dark-1);
+  background: var(--light-4);
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; text-decoration: none; }
+ul, ol { list-style: none; }
+button, input, select, textarea { font: inherit; color: inherit; background: none; }
+button:not(:disabled), [role='button']:not(:disabled) { cursor: pointer; }
+table { border-collapse: collapse; }
+h1, h2, h3, h4, h5, h6 { font-size: inherit; font-weight: inherit; }
+input::placeholder, textarea::placeholder { color: var(--gray-400); }
+[hidden] { display: none !important; }
+body.has-modal { overflow: hidden; }
+
+/* Sin flechitas en los campos de número que lo pidan */
+input.no-spin::-webkit-outer-spin-button,
+input.no-spin::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input.no-spin { -moz-appearance: textfield; appearance: textfield; }
+
+/* ---------- Estilos de texto ---------- */
+.heading-1 { color: var(--dark-1); font-family: var(--font-heading); font-size: 48px; line-height: 1; font-weight: 700; letter-spacing: -0.025em; }
+.heading-2 { color: var(--dark-1); font-family: var(--font-heading); font-size: 30px; line-height: 36px; font-weight: 700; letter-spacing: -0.025em; }
+.heading-3 { color: var(--dark-1); font-family: var(--font-heading); font-size: 30px; line-height: 36px; font-weight: 700; }
+.heading-4 { color: var(--dark-1); font-family: var(--font-heading); font-size: 24px; line-height: 32px; font-weight: 700; }
+.heading-5 { color: var(--dark-1); font-family: var(--font-heading); font-size: 20px; line-height: 28px; font-weight: 700; }
+.heading-6 { color: var(--dark-1); font-family: var(--font-heading); font-size: 18px; line-height: 28px; font-weight: 700; }
+.body-small { font-family: var(--font-label); font-size: 14px; line-height: 20px; font-weight: 400; }
+.body-normal { font-family: var(--font-label); font-size: 16px; line-height: 24px; font-weight: 400; }
+.body-large { font-family: var(--font-label); font-size: 20px; line-height: 28px; font-weight: 600; }
+.label-small { font-family: var(--font-label); font-size: 12px; line-height: 16px; font-weight: 600; }
+.label-normal { font-family: var(--font-label); font-size: 14px; line-height: 20px; font-weight: 600; }
+.label-large { font-family: var(--font-label); font-size: 16px; line-height: 24px; font-weight: 600; }
+@media (min-width: 768px) {
+  .heading-2 { font-size: 36px; line-height: 40px; }
+  .label-normal { font-size: 16px; line-height: 24px; }
+}
+
+/* Texto de apoyo */
+.text-muted { color: var(--gray-400); }
+.text-strong { color: var(--dark-1); font-weight: 700; }
+.text-brand { color: var(--brand); }
+.text-error { color: var(--error); }
+.req { color: var(--brand); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@keyframes fade-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}

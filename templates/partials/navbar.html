@@ -1,73 +1,71 @@
 {{define "navbar"}}
 {{if .User}}
-<nav id="hook-navbar" class="w-full px-4 lg:px-8 py-2 bg-brand-primary z-50 fixed top-0 left-0">
-  <div class="container flex flex-wrap items-center justify-between mx-auto">
+<nav id="hook-navbar" class="navbar">
+  <div class="navbar__inner">
     {{/* "Pestaña" clara que sigue al mouse (layout.js) */}}
-    <div data-nav-tab class="absolute z-0 bg-brand-lighter rounded-lg shadow-md transition-all duration-300 ease-in-out pointer-events-none" style="opacity:0"></div>
+    <div data-nav-tab class="navbar__tab" style="opacity:0"></div>
 
-    <div class="flex items-center gap-2 lg:gap-4 flex-wrap">
-      <a href="/dashboard" class="relative z-10 px-4 py-1.5 font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer">
-        <img src="/static/img/LOGO_BB.svg" alt="Hook Technologies" class="h-8" />
+    <div class="navbar__group navbar__group--main">
+      <a href="/dashboard" class="navbar__link navbar__logo">
+        <img src="/static/img/LOGO_BB.svg" alt="Hook Technologies" />
       </a>
 
       {{if .Can "Organizations.View"}}
-      <a href="/organizations" data-nav-link class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer {{if hasPrefix .Path "/organizations"}}is-active{{end}}">Organizaciones</a>
+      <a href="/organizations" data-nav-link class="navbar__link {{if hasPrefix .Path "/organizations"}}is-active{{end}}">Organizaciones</a>
       {{end}}
       {{if .Can "Pos.View"}}
-      <a href="/point-of-sale" data-nav-link class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer {{if hasPrefix .Path "/point-of-sale"}}is-active{{end}}">Punto de venta</a>
+      <a href="/point-of-sale" data-nav-link class="navbar__link {{if hasPrefix .Path "/point-of-sale"}}is-active{{end}}">Punto de venta</a>
       {{end}}
       {{if .Can "Repairs.View"}}
-      <a href="/repairs" data-nav-link class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer {{if hasPrefix .Path "/repairs"}}is-active{{end}}">Reparaciones</a>
+      <a href="/repairs" data-nav-link class="navbar__link {{if hasPrefix .Path "/repairs"}}is-active{{end}}">Reparaciones</a>
       {{end}}
       {{if .Can "Inventory.View"}}
-      <a href="/inventory" data-nav-link class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer {{if hasPrefix .Path "/inventory"}}is-active{{end}}">Inventario</a>
+      <a href="/inventory" data-nav-link class="navbar__link {{if hasPrefix .Path "/inventory"}}is-active{{end}}">Inventario</a>
       {{end}}
       {{if .Can "Reports.View"}}
-      <a href="/reports" data-nav-link class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer {{if hasPrefix .Path "/reports"}}is-active{{end}}">Reportes</a>
+      <a href="/reports" data-nav-link class="navbar__link {{if hasPrefix .Path "/reports"}}is-active{{end}}">Reportes</a>
       {{end}}
     </div>
 
-    <div class="flex items-center gap-2 lg:gap-4">
-      <a href="/settings/organization" data-nav-link title="Configuración" class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer {{if hasPrefix .Path "/settings"}}is-active{{end}}">
-        <i class="fa-solid fa-gear pointer-events-none"></i>
+    <div class="navbar__group">
+      <a href="/settings/organization" data-nav-link title="Configuración" class="navbar__link {{if hasPrefix .Path "/settings"}}is-active{{end}}">
+        <i class="fa-solid fa-gear"></i>
       </a>
 
-      <div class="group relative flex items-center py-2">
-        <a data-nav-link tabindex="0" class="relative z-10 px-4 py-1.5 text-base font-semibold text-light-4 hover:text-light-4 transition-colors cursor-pointer" aria-label="Cuenta">
+      <div class="navbar__account">
+        <a data-nav-link tabindex="0" class="navbar__link" aria-label="Cuenta">
           <i class="fa-solid fa-circle-user"></i>
         </a>
 
-        <div class="absolute top-full right-0 hidden group-hover:block group-focus-within:block pt-2">
-          <ul class="min-w-72 bg-white p-3 rounded-2xl shadow-card">
-            <li class="flex items-center gap-3 mb-3">
-              <div class="flex items-center justify-center h-7 w-7 shrink-0">
-                <i class="fa-solid fa-circle-user text-2xl text-dark-1"></i>
-              </div>
-              <div class="flex flex-col">
-                <div class="flex items-center gap-3 whitespace-nowrap">
-                  <span class="text-base font-bold text-dark-1">{{.User.Name}}</span>
-                  <span class="bg-info-subtle text-info-darker text-xs font-semibold px-2 py-1 rounded-full">{{.User.Role}}</span>
+        <div class="account-menu">
+          <ul class="account-menu__card">
+            <li class="account-menu__user">
+              <div class="account-menu__avatar"><i class="fa-solid fa-circle-user"></i></div>
+              <div class="account-menu__info">
+                <div class="account-menu__name-row">
+                  <span class="account-menu__name">{{.User.Name}}</span>
+                  <span class="account-menu__role">{{.User.Role}}</span>
                 </div>
-                <span class="text-sm text-dark-3">{{.User.Email}}</span>
+                <span class="account-menu__email">{{.User.Email}}</span>
               </div>
             </li>
-            <li><div class="h-1 w-full border-t border-gray-200 mt-2"></div></li>
+            <li class="account-menu__divider"></li>
             <li>
-              <a href="/settings/profile" class="text-dark-2 hover:bg-light-3 rounded-2xl flex items-center p-2 mt-2 cursor-pointer">
-                <div class="flex items-center justify-center h-7 w-7 shrink-0 mr-3"><i class="fa-solid fa-user"></i></div>
-                <span class="whitespace-nowrap text-[15px] font-semibold text-dark-2">Perfil</span>
+              <a href="/settings/profile" class="account-menu__link">
+                <div class="account-menu__icon"><i class="fa-solid fa-user"></i></div>
+                <span>Perfil</span>
               </a>
             </li>
             <li>
-              <a href="/logout" data-logout class="text-dark-2 hover:bg-light-3 rounded-2xl flex items-center p-2 cursor-pointer">
-                <div class="flex items-center justify-center h-7 w-7 shrink-0 mr-3"><i class="fa-solid fa-right-left"></i></div>
-                <span class="whitespace-nowrap text-[15px] font-semibold text-dark-2">Cambiar de cuenta</span>
+              <a href="/logout" data-logout class="account-menu__link">
+                <div class="account-menu__icon"><i class="fa-solid fa-right-left"></i></div>
+                <span>Cambiar de cuenta</span>
               </a>
             </li>
             <li>
-              <a href="/logout" data-logout class="text-dark-2 hover:bg-light-3 rounded-2xl flex items-center p-2 cursor-pointer">
-                <div class="flex items-center justify-center h-7 w-7 shrink-0 mr-3"><i class="fa-solid fa-right-from-bracket"></i></div>
-                <span class="whitespace-nowrap text-[15px] font-semibold text-dark-2">Cerrar sesión</span>
+              <a href="/logout" data-logout class="account-menu__link">
+                <div class="account-menu__icon"><i class="fa-solid fa-right-from-bracket"></i></div>
+                <span>Cerrar sesión</span>
               </a>
             </li>
           </ul>

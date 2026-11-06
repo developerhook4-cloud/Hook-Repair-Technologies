@@ -17,9 +17,8 @@
 
   const statusPill = (status) => {
     const s = ui.norm(status);
-    const cls =
-      s === 'agotado' ? 'bg-error-subtle text-error-primary' : s === 'bajo stock' ? 'bg-warning-subtle text-warning-darker' : 'bg-success-subtle text-success-darker';
-    return `<span class="px-4 py-1.5 rounded-full label-small inline-block font-bold whitespace-nowrap ${cls}">${esc(status)}</span>`;
+    const cls = s === 'agotado' ? 'pill--danger' : s === 'bajo stock' ? 'pill--warning' : 'pill--success';
+    return `<span class="label-small pill pill--bold ${cls}">${esc(status)}</span>`;
   };
 
   const state = ui.listState({
@@ -109,15 +108,15 @@
       compatible: new Set((p.modelIds || []).filter((id) => id !== p.modelId)),
     };
     const num = (label, name, value, extra = '') => `
-      <div class="flex flex-col gap-1.5">
-        <label class="label-normal font-semibold text-dark-1">${esc(label)}</label>
+      <div class="field">
+        <label class="label-normal field__label">${esc(label)}</label>
         <input type="number" name="${name}" value="${esc(value)}" step="any" min="0" ${extra}
-               class="w-full border border-gray-300 rounded-[14px] px-4 py-2 focus:outline-none focus:border-brand-primary body-normal text-dark-1 disabled:bg-gray-50 disabled:text-gray-400" />
+               class="input input--compact" />
       </div>`;
     const ddf = (label, id, required, quick) => `
-      <div class="flex flex-col gap-1.5">
-        <div class="flex items-center gap-2">
-          <label class="label-normal font-semibold text-dark-1">${esc(label)}${required ? ' <span class="text-brand-primary">*</span>' : ''}</label>
+      <div class="field">
+        <div class="field__label-row">
+          <label class="label-normal field__label">${esc(label)}${required ? ' <span class="req">*</span>' : ''}</label>
           ${quick ? ui.quickAddBtn(quick[0], quick[1]) : ''}
         </div>
         <div id="${id}"></div>
@@ -126,63 +125,63 @@
     const canSuppliers = Hook.can('Suppliers.Update');
 
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col max-h-[90vh] border border-gray-100 overflow-hidden animate-fade-in">
-        <div class="p-6 md:px-8 md:pt-8 pb-4 flex justify-between items-start shrink-0 border-b border-gray-100">
-          <h2 class="heading-5 text-dark-1">${editing ? 'Editar producto' : 'Crear producto'}</h2>
-          <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors">${ui.icon('xmark', 'text-xl')}</button>
+      <div class="modal-card modal-card--3xl modal-card--clip">
+        <div class="modal-top modal-top--bordered">
+          <h2 class="heading-5">${editing ? 'Editar producto' : 'Crear producto'}</h2>
+          <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
         </div>
-        <div class="p-6 md:p-8 overflow-y-auto flex-1 bg-white" data-form>
-          <div class="flex flex-col md:flex-row gap-10">
-            <div class="flex-1 flex flex-col gap-5">
-              <h3 class="label-normal font-bold text-dark-1">Información General</h3>
-              <div class="flex flex-col gap-1.5">
-                <label class="label-normal font-semibold text-dark-1">Nombre del producto <span class="text-brand-primary">*</span></label>
+        <div class="modal-body" data-form>
+          <div class="product-form">
+            <div class="product-form__col">
+              <h3 class="label-normal section-label">Información General</h3>
+              <div class="field">
+                <label class="label-normal field__label">Nombre del producto <span class="req">*</span></label>
                 <input type="text" name="name" maxlength="250" value="${esc(p.name || '')}" placeholder="Ej. Pantalla OLED iPhone 13"
-                       class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none focus:border-brand-primary body-normal text-dark-1" />
+                       class="input" />
               </div>
-              <div class="grid grid-cols-2 gap-4">${ddf('Categoría', 'ddCat', true, canCatalogs && ['category', 'Nueva'])}${ddf('Marca', 'ddBrand', true, canCatalogs && ['brand', 'Nueva'])}</div>
-              <div class="grid grid-cols-2 gap-4">${ddf('Dispositivo asociado', 'ddModel', false, canCatalogs && ['model', 'Nuevo'])}${ddf('Condición', 'ddCond')}</div>
-              <div class="flex flex-col gap-1.5">
-                <label class="label-normal font-semibold text-dark-1">Modelos compatibles</label>
-                <div data-compatible class="flex flex-wrap gap-2 min-h-11 border border-gray-300 rounded-[14px] px-3 py-2"></div>
+              <div class="form-grid form-grid--2-always">${ddf('Categoría', 'ddCat', true, canCatalogs && ['category', 'Nueva'])}${ddf('Marca', 'ddBrand', true, canCatalogs && ['brand', 'Nueva'])}</div>
+              <div class="form-grid form-grid--2-always">${ddf('Dispositivo asociado', 'ddModel', false, canCatalogs && ['model', 'Nuevo'])}${ddf('Condición', 'ddCond')}</div>
+              <div class="field">
+                <label class="label-normal field__label">Modelos compatibles</label>
+                <div data-compatible class="chip-box"></div>
               </div>
-              <div class="grid grid-cols-2 gap-4">
+              <div class="form-grid form-grid--2-always">
                 ${ddf('Proveedor', 'ddSupplier', false, canSuppliers && ['supplier', 'Nuevo'])}
-                <div class="flex flex-col gap-1.5">
-                  <label class="label-normal font-semibold text-dark-1">UPC</label>
+                <div class="field">
+                  <label class="label-normal field__label">UPC</label>
                   <input type="text" value="${esc(p.upc || '')}" placeholder="Se genera al guardar" readonly
-                         class="w-full border border-gray-300 rounded-[14px] px-4 py-2.5 focus:outline-none body-normal text-dark-1 bg-gray-50" />
+                         class="input" />
                 </div>
               </div>
             </div>
 
-            <div class="flex-1 flex flex-col gap-5 md:border-l border-gray-100 md:pl-10">
-              <h3 class="label-normal font-bold text-dark-1">Precios e Inventario</h3>
-              <div class="grid grid-cols-3 gap-3">
+            <div class="product-form__col product-form__col--side">
+              <h3 class="label-normal section-label">Precios e Inventario</h3>
+              <div class="product-form__trio">
                 ${num('Costo ($)', 'price', editing ? p.price : 0)}
                 ${num('P. General ($)', 'generalSalePrice', editing ? p.generalSalePrice : 0)}
                 ${num('P. Distrib. ($)', 'distributorSalePrice', editing ? p.distributorSalePrice : 0)}
               </div>
-              <div class="grid grid-cols-3 gap-3">
+              <div class="product-form__trio">
                 ${num(editing ? 'Stock actual' : 'Stock Inicial', 'inStock', editing ? p.inStock : 0, editing ? 'disabled title="El stock cambia con los movimientos de inventario"' : '')}
                 ${num('Warning Stock', 'stockWarning', editing ? p.stockWarning : 0)}
                 ${num('P. Reorden', 'minimumReorderPoint', editing ? p.minimumReorderPoint : 0)}
               </div>
-              <div class="flex flex-col gap-3 mt-2">
-                <label class="flex items-center gap-2 ${editing ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} label-normal text-dark-1">
+              <div class="product-form__serial">
+                <label class="label-normal check${editing ? ' is-disabled' : ''}">
                   <input type="checkbox" name="isSerialized" ${p.isSerialized ? 'checked' : ''} ${editing ? 'disabled' : ''}
-                         class="w-4 h-4 rounded border-gray-300 text-brand-primary focus:ring-brand-primary accent-brand-primary cursor-pointer" />
+                         class="checkbox" />
                   Inventario Serializado (Requerir IMEI/Serie)
                 </label>
-                <div data-serials class="bg-gray-50 p-4 rounded-2xl border border-gray-200 mt-2 max-h-40 overflow-y-auto scroll-smooth" hidden></div>
+                <div data-serials class="serial-box" hidden></div>
               </div>
-              ${editing ? '<p class="label-small text-gray-400">El stock se ajusta desde Inventario → Movimientos.</p>' : ''}
+              ${editing ? '<p class="label-small field__hint">El stock se ajusta desde Inventario → Movimientos.</p>' : ''}
             </div>
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 border-t border-gray-100 shrink-0">
-          <button type="button" data-close class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cancelar</button>
-          <button type="button" data-save disabled class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">${editing ? 'Guardar cambios' : 'Crear producto'}</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-save disabled class="btn btn--primary">${editing ? 'Guardar cambios' : 'Crear producto'}</button>
         </div>
       </div>`);
 
@@ -202,12 +201,10 @@
         ? list
             .map((x) => {
               const on = cur.compatible.has(x.id);
-              return `<button type="button" data-model="${x.id}" class="px-3 py-1 rounded-full label-small border transition-colors ${
-                on ? 'bg-brand-primary text-white border-brand-primary' : 'bg-white text-dark-2 border-gray-200 hover:border-brand-primary'
-              }">${esc(x.name)}</button>`;
+              return `<button type="button" data-model="${x.id}" class="label-small chip${on ? ' is-on' : ''}">${esc(x.name)}</button>`;
             })
             .join('')
-        : `<span class="body-normal text-gray-400 py-1">${cur.brandId ? 'Esta marca no tiene más modelos.' : 'Selecciona una marca para ver sus modelos.'}</span>`;
+        : `<span class="body-normal chip-box__empty">${cur.brandId ? 'Esta marca no tiene más modelos.' : 'Selecciona una marca para ver sus modelos.'}</span>`;
     }
     compatBox.addEventListener('click', (e) => {
       const b = e.target.closest('[data-model]');
@@ -317,8 +314,8 @@
       const stock = Math.max(0, parseInt(form.querySelector('[name=inStock]').value || '0', 10) || 0);
       if (editing) {
         serialBox.hidden = !(p.isSerialized && serials.length);
-        serialBox.innerHTML = `<p class="label-small text-dark-2 mb-2">IMEI / Series registrados:</p>
-          <div class="grid grid-cols-2 gap-2 body-small text-dark-1">${serials.map((s, i) => `<div><span class="text-gray-500">#${i + 1}:</span> ${esc(s)}</div>`).join('')}</div>`;
+        serialBox.innerHTML = `<p class="label-small serial-box__title">IMEI / Series registrados:</p>
+          <div class="body-small serial-box__grid">${serials.map((s, i) => `<div><span class="serial-num">#${i + 1}:</span> ${esc(s)}</div>`).join('')}</div>`;
         return;
       }
       serialBox.hidden = !(serialized && stock > 0);
@@ -326,13 +323,13 @@
       serials = serials.slice(0, stock);
       while (serials.length < stock) serials.push('');
       serialBox.innerHTML = `
-        <p class="label-small text-dark-2 mb-3">Ingresa los ${stock} IMEI / Series para el stock actual:</p>
-        <div class="grid grid-cols-2 gap-3">
+        <p class="label-small serial-box__title">Ingresa los ${stock} IMEI / Series para el stock actual:</p>
+        <div class="serial-box__grid serial-box__grid--inputs">
           ${serials
             .map(
-              (s, i) => `<div class="flex flex-col gap-1">
-                <label class="label-small text-gray-500">Unidad ${i + 1}</label>
-                <input type="text" data-serial="${i}" value="${esc(s)}" placeholder="IMEI o Serie" class="w-full border border-gray-300 rounded-[10px] px-3 py-1.5 focus:outline-none focus:border-brand-primary body-small text-dark-1 bg-white" />
+              (s, i) => `<div class="serial-box__unit">
+                <label class="label-small detail-label">Unidad ${i + 1}</label>
+                <input type="text" data-serial="${i}" value="${esc(s)}" placeholder="IMEI o Serie" class="body-small serial-box__input" />
               </div>`
             )
             .join('')}
@@ -387,13 +384,13 @@
   function openFilters() {
     const temp = Object.assign({}, filters);
     const m = ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-162.5 flex flex-col border border-gray-100 overflow-visible animate-fade-in">
-        <div class="p-6 md:p-8 pb-4 flex justify-between items-start">
-          <h2 class="heading-5 text-dark-1">Filtros de inventario</h2>
-          <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors">${ui.icon('xmark', 'text-xl')}</button>
+      <div class="modal-card modal-card--filters modal-card--visible">
+        <div class="modal-top">
+          <h2 class="heading-5">Filtros de inventario</h2>
+          <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
         </div>
-        <div class="px-6 md:px-8 pb-6">
-          <div class="grid grid-cols-2 gap-4" data-form>
+        <div class="modal-scroll modal-scroll--visible">
+          <div class="form-grid form-grid--2-always" data-form>
             ${ui.field({ label: 'Nombre', name: 'name', value: temp.name, placeholder: 'Introducir nombre' })}
             ${ui.ddField({ label: 'Categoría', id: 'fCat' })}
             ${ui.ddField({ label: 'Marca', id: 'fBrand' })}
@@ -401,9 +398,9 @@
             ${ui.ddField({ label: 'Distribuidor', id: 'fSup' })}
           </div>
         </div>
-        <div class="p-6 md:px-8 bg-gray-50 flex justify-end gap-3 border-t border-gray-100 rounded-b-2xl">
-          <button type="button" data-clear class="px-5 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Limpiar</button>
-          <button type="button" data-apply class="px-5 py-2.5 rounded-lg bg-brand-primary text-white label-normal font-bold hover:opacity-90 transition-opacity shadow-sm">Aplicar filtros</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-clear class="btn btn--muted">Limpiar</button>
+          <button type="button" data-apply class="btn btn--primary">Aplicar filtros</button>
         </div>
       </div>`);
     const dCat = ui.dropdown(m.el.querySelector('#fCat'), { items: items(categories), value: temp.category || null, none: 'Todas', onChange: (v) => (temp.category = v || '') });
@@ -428,25 +425,25 @@
   // ── Detalles ────────────────────────────────────────────────────────
   function openDetails(p) {
     const item = (label, value) =>
-      `<div><span class="label-small text-gray-500 block">${esc(label)}</span><span class="body-normal font-semibold text-dark-1 break-words">${esc(value)}</span></div>`;
+      `<div><span class="label-small detail-label">${esc(label)}</span><span class="body-normal detail-value">${esc(value)}</span></div>`;
     ui.modal(`
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden border border-gray-100 animate-fade-in">
-        <div class="p-6 md:px-8 md:pt-8 pb-4 flex justify-between items-start shrink-0 border-b border-gray-100">
-          <div class="flex items-center gap-3"><h2 class="heading-5 text-dark-1">Detalles del producto</h2>${statusPill(p.status)}</div>
-          <button type="button" data-close class="text-gray-400 hover:text-dark-1 transition-colors">${ui.icon('xmark', 'text-xl')}</button>
+      <div class="modal-card modal-card--lg modal-card--tall modal-card--clip">
+        <div class="modal-top modal-top--bordered">
+          <div class="modal-top__title"><h2 class="heading-5">Detalles del producto</h2>${statusPill(p.status)}</div>
+          <button type="button" data-close class="modal-close" aria-label="Cerrar">${ui.icon('xmark')}</button>
         </div>
-        <div class="p-6 md:px-8 overflow-y-auto flex-1 flex flex-col gap-6">
+        <div class="modal-scroll modal-scroll--stack">
           <div>
-            <h3 class="label-normal font-bold text-dark-1 mb-3">Información Principal</h3>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <h3 class="label-normal section-label section-label--spaced">Información Principal</h3>
+            <div class="detail-grid">
               ${item('ID', p.productNumber)}${item('UPC', p.upc || 'N/A')}${item('Nombre', p.name)}
               ${item('Categoría', p.categoryName || 'N/A')}${item('Marca', p.brandName || 'N/A')}${item('Modelos', (p.modelNames || []).join(', ') || 'N/A')}
               ${item('Proveedor', p.supplierName || 'N/A')}${item('Condición', p.condition || 'N/A')}${item('Dispositivo Asociado', p.modelName || 'N/A')}
             </div>
           </div>
           <div>
-            <h3 class="label-normal font-bold text-dark-1 mb-3">Inventario y Precios</h3>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+            <h3 class="label-normal section-label section-label--spaced">Inventario y Precios</h3>
+            <div class="detail-grid">
               ${item('Stock Actual', p.inStock)}${item('Warning Stock', p.stockWarning)}${item('Punto Reorden', p.minimumReorderPoint)}
               ${item('Costo', ui.money(p.price))}${item('Precio General', ui.money(p.generalSalePrice))}${item('Precio Distribuidor', ui.money(p.distributorSalePrice))}
             </div>
@@ -454,20 +451,20 @@
           ${
             p.isSerialized
               ? `<div>
-                   <h3 class="label-normal font-bold text-dark-1 mb-3">Números de Serie / IMEI</h3>
+                   <h3 class="label-normal section-label section-label--spaced">Números de Serie / IMEI</h3>
                    ${
                      (p.serialNumbers || []).length
-                       ? `<div class="bg-gray-50 p-4 rounded-2xl border border-gray-100 max-h-37.5 overflow-y-auto scroll-smooth"><div class="grid grid-cols-2 gap-2">
-                            ${p.serialNumbers.map((s, i) => `<div class="body-normal text-dark-1"><span class="label-small text-gray-500">#${i + 1}:</span> ${esc(s || 'Sin registrar')}</div>`).join('')}
+                       ? `<div class="serial-box serial-box--detail"><div class="serial-box__grid">
+                            ${p.serialNumbers.map((s, i) => `<div class="body-normal"><span class="label-small serial-num">#${i + 1}:</span> ${esc(s || 'Sin registrar')}</div>`).join('')}
                           </div></div>`
-                       : '<p class="body-normal text-gray-400 italic">No hay números de serie registrados para este producto.</p>'
+                       : '<p class="body-normal text-muted text-italic">No hay números de serie registrados para este producto.</p>'
                    }
                  </div>`
               : ''
           }
         </div>
-        <div class="p-6 bg-gray-50 flex justify-end border-t border-gray-100 shrink-0">
-          <button type="button" data-close class="px-6 py-2.5 rounded-lg bg-gray-200 text-dark-2 label-normal font-bold hover:bg-gray-300 transition-colors">Cerrar</button>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cerrar</button>
         </div>
       </div>`);
   }
