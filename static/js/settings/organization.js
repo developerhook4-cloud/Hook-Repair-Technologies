@@ -19,7 +19,7 @@
     {
       name: [ui.rules.required, ui.rules.pattern(nameRe)],
       email: [ui.rules.required, ui.rules.email],
-      phone: [ui.rules.phone],
+      phone1: [ui.rules.phone],
       phone2: [ui.rules.phone],
       postCode: [ui.rules.pattern(/^[0-9]+$/)],
     },
@@ -35,7 +35,7 @@
       const set = (n, val) => (form.elements[n].value = val || '');
       set('name', o.name);
       set('email', o.email);
-      set('phone', o.phone1 || o.phone);
+      set('phone1', o.phone1);
       set('phone2', o.phone2);
       set('website', o.website);
       set('address', a.address);
@@ -58,7 +58,7 @@
         await Hook.put('/api/organizations/mine', {
           name: f.name.trim(),
           email: f.email.trim(),
-          phone1: f.phone.trim(),
+          phone1: f.phone1.trim(),
           phone2: f.phone2.trim(),
           website: f.website.trim(),
           address: { address: f.address.trim(), city: f.city.trim(), state: f.state.trim(), postCode: f.postCode.trim(), country: f.country.trim() },
