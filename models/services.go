@@ -40,14 +40,14 @@ type SaveServiceRequest struct {
 
 const serviceSelect = `
 	SELECT s.id, s.name, s.description,
-	       s.category_id, COALESCE(c.name, ''),
-	       s.brand_id, COALESCE(b.name, ''),
-	       s.model_id, COALESCE(m.name, ''),
+	       c.id, COALESCE(c.name, ''),
+	       b.id, COALESCE(b.name, ''),
+	       m.id, COALESCE(m.name, ''),
 	       s.retail_price, s.public_price, s.distributor_price, s.active
 	FROM repair_services s
-	LEFT JOIN categories c ON c.id = s.category_id
-	LEFT JOIN brands b ON b.id = s.brand_id
-	LEFT JOIN device_models m ON m.id = s.model_id`
+	LEFT JOIN categories c ON c.id = s.category_id AND c.deleted_at IS NULL
+	LEFT JOIN brands b ON b.id = s.brand_id AND b.deleted_at IS NULL
+	LEFT JOIN device_models m ON m.id = s.model_id AND m.deleted_at IS NULL`
 
 func scanService(sc interface{ Scan(...any) error }) (*Service, error) {
 	var s Service

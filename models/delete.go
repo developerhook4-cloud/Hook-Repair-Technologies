@@ -187,8 +187,8 @@ func validPhone(label, phone string, required bool) error {
 		}
 		return nil
 	}
-	if !phoneChars.MatchString(phone) {
-		return Invalid("El %s solo puede tener números.", label)
+	if !phoneChars.MatchString(phone) || strings.Contains(phone[1:], "+") {
+		return Invalid("El %s solo puede tener números (el + solo va al inicio).", label)
 	}
 	digits := 0
 	for _, r := range phone {
@@ -200,6 +200,24 @@ func validPhone(label, phone string, required bool) error {
 		return Invalid("El %s debe tener entre 1 y 15 dígitos.", label)
 	}
 	return nil
+}
+
+// normalizePhone valida el teléfono (validPhone) y lo deja solo con dígitos,
+// con "+" al inicio si lo traía: "(662) 123-4567" → "6621234567". Así siempre
+// cabe en las columnas phone1 / phone2 (máximo 16 caracteres) y se guarda igual
+// sin importar cómo lo escribió quien lo capturó (KAN-145).
+func normalizePhone(label, phone string, required bool) (string, error) {
+	phone = strings.TrimSpace(phone)
+	if err := validPhone(label, phone, required); err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	for i, r := range phone {
+		if (r >= '0' && r <= '9') || (i == 0 && r == '+') {
+			b.WriteRune(r)
+		}
+	}
+	return b.String(), nil
 }
 
 // rfcPattern — RFC de persona moral (12) o física (13), formato del SAT.

@@ -139,16 +139,17 @@ func UpdateOrganizationUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
+	// Se revisa antes de cambiar nada: nadie se desactiva a sí mismo (KAN-145).
+	if in.Active != nil && !*in.Active && userID == currentUser(c).ID {
+		problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
+		return
+	}
 	u, err := models.UpdateUser(currentUser(c), id, userID, in)
 	if err != nil {
 		respondError(c, err, "user")
 		return
 	}
 	if in.Active != nil && *in.Active != u.Active {
-		if !*in.Active && userID == currentUser(c).ID {
-			problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
-			return
-		}
 		if err := models.SetUserStatus(currentUser(c), id, userID, *in.Active); err != nil {
 			respondError(c, err, "user")
 			return
