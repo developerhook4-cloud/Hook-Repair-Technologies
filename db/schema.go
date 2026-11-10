@@ -36,6 +36,10 @@ func migrate() {
 		mustExec("ALTER TABLE organizations ADD COLUMN is_platform TINYINT(1) NOT NULL DEFAULT 0")
 		markPlatformOrganization()
 	}
+	// Versión de sesiones del usuario (KAN-143): subirla invalida las cookies ya emitidas.
+	if !columnExists("users", "session_version") {
+		mustExec("ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 0")
+	}
 	// UNIQUE que ignora lo eliminado (permite volver a usar el nombre / email).
 	live := []struct{ table, col, src, typ, index, cols string }{
 		{"users", "email_live", "email", "VARCHAR(255)", "uq_users_email", "email_live"},

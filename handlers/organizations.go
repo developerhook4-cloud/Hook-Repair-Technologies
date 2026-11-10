@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -152,6 +153,11 @@ func UpdateOrganizationUser(c *gin.Context) {
 			respondError(c, err, "user")
 			return
 		}
+	}
+	// Si el usuario editado es quien tiene la sesión y cambió su contraseña, se
+	// vuelve a guardar la sesión actual con la versión nueva (KAN-143).
+	if strings.TrimSpace(in.Password) != "" {
+		keepSession(c, userID)
 	}
 	c.Status(http.StatusNoContent)
 }

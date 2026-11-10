@@ -30,6 +30,8 @@ const (
 	seedAdminEmail    = "admin@hookrepair.com"
 	seedAdminPassword = "Seed-Test-123"
 	testPassword      = "Prueba-12345"
+	// testOrigin — Origin de las peticiones de prueba: httptest usa Host "example.com".
+	testOrigin = "http://example.com"
 )
 
 var (
@@ -152,6 +154,7 @@ func (a *testApp) do(cookie *http.Cookie, method, path string, body any) resp {
 		rd = bytes.NewReader(nil)
 	}
 	req := httptest.NewRequest(method, path, rd)
+	req.Header.Set("Origin", testOrigin) // los navegadores mandan Origin en POST/PUT/PATCH/DELETE
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -169,6 +172,7 @@ func (a *testApp) login(t *testing.T, email, password string) *http.Cookie {
 	rec := httptest.NewRecorder()
 	b, _ := json.Marshal(map[string]string{"email": email, "password": password})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(b))
+	req.Header.Set("Origin", testOrigin)
 	req.Header.Set("Content-Type", "application/json")
 	a.router.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

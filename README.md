@@ -79,3 +79,8 @@ Todo bajo `/api`: `/api/auth/*`, `/api/organizations…` y, por organización,
 `/api/{orgId}/roles|users|categories|brands|models|services|clients|suppliers|products|inventory/movements|purchase-orders|goods-receipts`.
 Permisos con formato `Módulo.Acción` (`Inventory.View`, `Customers.Update`, …).
 El login deja una cookie de sesión HttpOnly (`hook_session`).
+Cerrar sesión, cambiar la contraseña, desactivar o eliminar a un usuario invalida
+todas sus cookies ya emitidas (`users.session_version`). Las peticiones POST/PUT/PATCH/DELETE
+a `/api/*` y `POST /logout` deben traer `Origin` (o `Referer`) del mismo host; si no, 403.
+`GET /logout` ya no cierra sesión: salir es `POST /logout` o `POST /api/auth/logout`.
+En producción (Railway o `APP_ENV=production`) la cookie es siempre `Secure` y se envía HSTS.

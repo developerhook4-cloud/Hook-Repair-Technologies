@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -22,6 +23,13 @@ func HashPassword(plain string) (string, error) {
 	b, err := bcrypt.GenerateFromPassword([]byte(plain), bcryptCost)
 	return string(b), err
 }
+
+// dummyHash — hash bcrypt ficticio (mismo costo que los reales), calculado una
+// sola vez, para igualar tiempos de Authenticate cuando el usuario no existe.
+var dummyHash = sync.OnceValue(func() string {
+	h, _ := HashPassword("hook-repair-dummy-password")
+	return h
+})
 
 // CheckPassword compara la contraseña con el hash.
 func CheckPassword(plain, hash string) bool {
@@ -210,7 +218,8 @@ func UpdateUser(actor *SessionUser, orgID, userID string, r SaveUserRequest) (*U
 		if err != nil {
 			return nil, err
 		}
-		_, err = db.DB.Exec(`UPDATE users SET name=?, email=?, role_id=?, password_hash=? WHERE organization_id=? AND id=?`,
+		// Cambiar la contraseña invalida las sesiones abiertas del usuario (KAN-143).
+		_, err = db.DB.Exec(`UPDATE users SET name=?, email=?, role_id=?, password_hash=?, session_version=session_version+1 WHERE organization_id=? AND id=?`,
 			r.Name, r.Email, roleID, hash, orgID, userID)
 		if err != nil {
 			return nil, err
@@ -239,7 +248,9 @@ func SetUserStatus(actor *SessionUser, orgID, userID string, active bool) error 
 			return err
 		}
 	}
-	res, err := db.DB.Exec(`UPDATE users SET active=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`, active, orgID, userID)
+	// Activar o desactivar también invalida las sesiones ya emitidas (KAN-143): al
+	// reactivarlo no reviven las cookies de antes.
+	res, err := db.DB.Exec(`UPDATE users SET active=?, session_version=session_version+1 WHERE organization_id=? AND id=? AND deleted_at IS NULL`, active, orgID, userID)
 	if err != nil {
 		return err
 	}
@@ -282,6 +293,7 @@ func UpdateProfile(userID string, r UpdateProfileRequest) error {
 		}
 	}
 	newHash := hash
+	passwordChanged := false
 	if r.NewPassword != nil && strings.TrimSpace(*r.NewPassword) != "" {
 		if r.OldPassword == nil || strings.TrimSpace(*r.OldPassword) == "" {
 			return Invalid("Debes ingresar tu contraseña actual para poder cambiarla.")
@@ -295,9 +307,40 @@ func UpdateProfile(userID string, r UpdateProfileRequest) error {
 		if newHash, err = HashPassword(*r.NewPassword); err != nil {
 			return err
 		}
+		passwordChanged = true
+	}
+	if passwordChanged {
+		// Cambiar la contraseña invalida las demás sesiones (KAN-143). El handler
+		// vuelve a guardar la sesión actual con la versión nueva.
+		_, err = db.DB.Exec(`UPDATE users SET name=?, email=?, password_hash=?, session_version=session_version+1 WHERE id=?`, name, email, newHash, userID)
+		return err
 	}
 	_, err = db.DB.Exec(`UPDATE users SET name=?, email=?, password_hash=? WHERE id=?`, name, email, newHash, userID)
 	return err
+}
+
+// InvalidateSessions sube la versión de sesiones del usuario: todas sus cookies
+// ya emitidas (en cualquier dispositivo) dejan de valer. Lo usa el logout.
+func InvalidateSessions(userID string) error {
+	if !IsID(userID) {
+		return ErrNotFound
+	}
+	_, err := db.DB.Exec(`UPDATE users SET session_version = session_version + 1 WHERE id = ?`, userID)
+	return err
+}
+
+// SessionVersion devuelve la versión de sesiones vigente del usuario (para
+// volver a guardar la sesión actual tras un cambio de contraseña propio).
+func SessionVersion(userID string) (int64, error) {
+	if !IsID(userID) {
+		return 0, ErrNotFound
+	}
+	var v int64
+	err := db.DB.QueryRow(`SELECT session_version FROM users WHERE id = ? AND deleted_at IS NULL`, userID).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, ErrNotFound
+	}
+	return v, err
 }
 
 // SessionUser — lo que la app necesita saber del usuario con sesión en cada
@@ -312,6 +355,9 @@ type SessionUser struct {
 	Permissions    []string `json:"permissions"`
 	OrganizationID string   `json:"organizationId"`
 	IsPlatform     bool     `json:"isPlatform"` // su organización es la de plataforma (administra a todas)
+	// SessionVersion — users.session_version al cargarlo; LoadUser la compara con la de la
+	// cookie para invalidar sesiones viejas. No sale en el JSON.
+	SessionVersion int64 `json:"-"`
 }
 
 // Can dice si el usuario tiene un permiso. Los permisos Organizations.* solo
@@ -352,12 +398,12 @@ func loadSessionUser(where string, arg any) (*SessionUser, string, error) {
 	var userActive, roleActive, orgActive bool
 	err := db.DB.QueryRow(`
 		SELECT u.id, u.name, u.email, u.role_id, r.name, r.permissions,
-		       u.organization_id, u.password_hash, u.active, r.active, o.active, o.is_platform
+		       u.organization_id, u.password_hash, u.active, r.active, o.active, o.is_platform, u.session_version
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		JOIN organizations o ON o.id = u.organization_id
 		WHERE u.deleted_at IS NULL AND `+where, arg).
-		Scan(&u.ID, &u.Name, &u.Email, &u.RoleID, &u.Role, &perms, &u.OrganizationID, &hash, &userActive, &roleActive, &orgActive, &u.IsPlatform)
+		Scan(&u.ID, &u.Name, &u.Email, &u.RoleID, &u.Role, &perms, &u.OrganizationID, &hash, &userActive, &roleActive, &orgActive, &u.IsPlatform, &u.SessionVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
@@ -388,6 +434,12 @@ func Authenticate(email, password string) (*SessionUser, error) {
 	}
 	u, hash, err := loadSessionUser("u.email = ?", email)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			// Email inexistente o usuario inactivo: se hace igual una comparación
+			// bcrypt para que la respuesta tarde lo mismo (evita enumerar correos
+			// midiendo el tiempo).
+			bcrypt.CompareHashAndPassword([]byte(dummyHash()), []byte(password))
+		}
 		return nil, err
 	}
 	if !CheckPassword(password, hash) {

@@ -35,7 +35,9 @@
   <div class="app-nav__divider"></div>
 
   <nav class="app-nav app-nav--plain">
-    <a href="/logout" data-logout class="app-nav__link app-nav__link--logout"><i class="fa-solid fa-right-from-bracket"></i><span>Cerrar sesión</span><span class="app-nav__tip">Cerrar sesión</span></a>
+    <form method="post" action="/logout" class="logout-form">
+      <button type="submit" data-logout class="app-nav__link app-nav__link--logout"><i class="fa-solid fa-right-from-bracket"></i><span>Cerrar sesión</span><span class="app-nav__tip">Cerrar sesión</span></button>
+    </form>
   </nav>
 </aside>
 {{end}}
