@@ -15,6 +15,25 @@ EXISTS`), así que en una base vacía deja todo listo y en una con datos no toca
 nada. El esquema completo está en `db/schema.sql`; también lo puedes pegar en la
 pestaña **Query** de MySQL en Railway.
 
+## Pruebas
+
+Requiere **Go 1.27.3** o más nuevo (es la versión de `go.mod`; con `GOTOOLCHAIN=auto`
+Go la descarga solo).
+
+Las pruebas unitarias corren sin nada extra. Las de integración usan MySQL y se
+saltan si no está `HOOK_TEST_MYSQL`; crean y borran su propia base `hook_test_*`.
+
+```bash
+# MySQL de pruebas en Docker (puerto 33306 para no chocar con el de desarrollo)
+docker run -d --name hr-mysql -e MYSQL_ROOT_PASSWORD=root -p 33306:3306 mysql:8.4
+
+HOOK_TEST_MYSQL='root:root@tcp(127.0.0.1:33306)/' go test ./... -count=1
+```
+
+Las de integración tardan ~80 s. CI (GitHub Actions, `.github/workflows/ci.yml`)
+corre lo mismo en cada pull request y en cada push a `main`: `gofmt`, `go vet`,
+`go build` y `go test` contra un MySQL 8.4.
+
 ## Railway
 
 - Variables del servicio: `MYSQL_URL=${{MySQL.MYSQL_URL}}`, `SESSION_SECRET`,
