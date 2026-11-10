@@ -77,6 +77,21 @@ func main() {
 
 	auth.InitStore()
 
+	router := setupRouter()
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Printf("Hook Repair escuchando en :%s", port)
+	if err := router.Run(":" + port); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// setupRouter arma el router con todas las rutas (separado de main para poder
+// probarlo con httptest). Requiere que db y auth ya estén inicializados.
+func setupRouter() *gin.Engine {
 	if os.Getenv("GIN_MODE") == "" {
 		gin.SetMode(gin.ReleaseMode)
 	}
@@ -227,12 +242,5 @@ func main() {
 		c.Redirect(http.StatusFound, "/")
 	})
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Printf("Hook Repair escuchando en :%s", port)
-	if err := router.Run(":" + port); err != nil {
-		log.Fatal(err)
-	}
+	return router
 }

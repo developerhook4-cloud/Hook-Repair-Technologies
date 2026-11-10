@@ -89,3 +89,25 @@ func parseMySQLURL(raw string) string {
 
 	return fmt.Sprintf("%s:%s@tcp(%s)/%s?%s", user, pass, host, dbname, dsnParams)
 }
+
+// ConnectDSN abre la conexión a partir de un DSN explícito
+// ("usuario:password@tcp(host:puerto)/nombre_db"); si no trae parámetros agrega
+// los mismos que Connect. Devuelve el error en vez de terminar el programa
+// (lo usan las pruebas de integración).
+func ConnectDSN(dsn string) error {
+	if !strings.Contains(dsn, "?") {
+		dsn += "?" + dsnParams
+	}
+	conn, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return err
+	}
+	conn.SetMaxOpenConns(10)
+	conn.SetMaxIdleConns(5)
+	if err := conn.Ping(); err != nil {
+		conn.Close()
+		return err
+	}
+	DB = conn
+	return nil
+}
