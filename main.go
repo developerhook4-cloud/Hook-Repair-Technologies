@@ -186,6 +186,7 @@ func setupRouter() *gin.Engine {
 	orgs.PUT("/:id", h.RequirePermission(models.UpdateOrganizations), h.UpdateOrganization)
 	orgs.PATCH("/:id/status", h.RequirePermission(models.DeleteOrganizations), h.UpdateOrganizationStatus)
 	orgs.GET("/:id/users", h.RequirePermission(models.ViewOrganizations), h.ListOrganizationUsers)
+	orgs.GET("/:id/roles", h.RequirePermission(models.ViewOrganizations), h.ListOrganizationRoles)
 	orgs.POST("/:id/users", h.RequirePermission(models.UpdateOrganizations), h.CreateOrganizationUser)
 	orgs.PUT("/:id/users/:userId", h.RequirePermission(models.UpdateOrganizations), h.UpdateOrganizationUser)
 	orgs.PATCH("/:id/users/:userId/status", h.RequirePermission(models.DeleteOrganizations), h.UpdateOrganizationUserStatus)

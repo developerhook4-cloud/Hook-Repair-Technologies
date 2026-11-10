@@ -146,6 +146,11 @@ func UpdateUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
+	// Misma regla que el PATCH .../status: nadie se desactiva a sí mismo (KAN-145).
+	if in.Active != nil && !*in.Active && id == currentUser(c).ID {
+		problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
+		return
+	}
 	u, err := models.UpdateUser(currentUser(c), orgOf(c), id, in)
 	if err != nil {
 		respondError(c, err, "user")

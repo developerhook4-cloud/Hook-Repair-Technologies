@@ -24,6 +24,15 @@ type CategoryRequest struct {
 	Icon string `json:"icon"`
 }
 
+// validIcon — la clase del ícono cabe en la columna icon (100 caracteres).
+func validIcon(icon string) (string, error) {
+	i := strings.TrimSpace(icon)
+	if runeLen(i) > 100 {
+		return "", Invalid("El ícono no puede pasar de 100 caracteres.")
+	}
+	return i, nil
+}
+
 func validCatalogName(name string) (string, error) {
 	n := strings.TrimSpace(name)
 	if n == "" || runeLen(n) > 150 {
@@ -67,8 +76,12 @@ func CreateCategory(orgID string, r CategoryRequest) (*Category, error) {
 	if err != nil {
 		return nil, err
 	}
+	icon, err := validIcon(r.Icon)
+	if err != nil {
+		return nil, err
+	}
 	id, err := insert(db.DB, `INSERT INTO categories (organization_id, name, icon, active) VALUES (?,?,?,1)`,
-		orgID, name, strings.TrimSpace(r.Icon))
+		orgID, name, icon)
 	if err != nil {
 		if IsUniqueViolation(err) {
 			return nil, Conflict("La categoría ya existe.")
@@ -84,8 +97,12 @@ func UpdateCategory(orgID, id string, r CategoryRequest) (*Category, error) {
 	if err != nil {
 		return nil, err
 	}
+	icon, err := validIcon(r.Icon)
+	if err != nil {
+		return nil, err
+	}
 	res, err := db.DB.Exec(`UPDATE categories SET name=?, icon=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`,
-		name, strings.TrimSpace(r.Icon), orgID, id)
+		name, icon, orgID, id)
 	if err != nil {
 		if IsUniqueViolation(err) {
 			return nil, Conflict("La categoría ya existe.")
