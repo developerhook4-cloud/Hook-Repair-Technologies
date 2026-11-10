@@ -29,11 +29,14 @@ func problem(c *gin.Context, status int, title, detail string) {
 func respondError(c *gin.Context, err error, what string) {
 	var ve *models.ValidationError
 	var ce *models.ConflictError
+	var fe *models.ForbiddenError
 	switch {
 	case errors.As(err, &ve):
 		problem(c, http.StatusBadRequest, "Invalid "+what, ve.Msg)
 	case errors.As(err, &ce):
 		problem(c, http.StatusConflict, what+" conflict", ce.Msg)
+	case errors.As(err, &fe):
+		problem(c, http.StatusForbidden, "Forbidden", fe.Msg)
 	case errors.Is(err, models.ErrNotFound):
 		problem(c, http.StatusNotFound, what+" not found", "El registro no existe.")
 	case models.IsUniqueViolation(err):

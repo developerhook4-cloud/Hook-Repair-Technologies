@@ -27,6 +27,8 @@
 
   /** ¿El usuario tiene este permiso? */
   Hook.can = function (permission) {
+    // Organizations.* solo vale en la organización de plataforma (igual que en el servidor).
+    if (/^organizations\./i.test(String(permission)) && !(Hook.user && Hook.user.isPlatform)) return false;
     const perms = (Hook.user && Hook.user.permissions) || [];
     return perms.some((p) => p === '*' || String(p).toLowerCase() === String(permission).toLowerCase());
   };

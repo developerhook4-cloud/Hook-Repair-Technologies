@@ -74,6 +74,30 @@ func RequirePermission(permission string) gin.HandlerFunc {
 	}
 }
 
+// RequirePlatform — 403 si el usuario no es de la organización de plataforma
+// (administración de todas las organizaciones).
+func RequirePlatform() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if u := currentUser(c); u == nil || !u.IsPlatform {
+			problem(c, http.StatusForbidden, "Forbidden", "Esta sección es solo para la administración de la plataforma.")
+			return
+		}
+		c.Next()
+	}
+}
+
+// RequireOrgAdmin — 403 si el usuario no es administrador de su organización
+// (puede editar usuarios y roles).
+func RequireOrgAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !currentUser(c).IsAdmin() {
+			problem(c, http.StatusForbidden, "Forbidden", "Solo los administradores de la organización pueden hacer esto.")
+			return
+		}
+		c.Next()
+	}
+}
+
 // RequireTenant — el :orgId de la ruta debe ser la organización del usuario.
 func RequireTenant() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -95,6 +119,19 @@ func RequirePage() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if currentUser(c) == nil {
 			c.Redirect(http.StatusFound, "/login")
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// RequirePagePlatform — si no es de la organización de plataforma, de regreso
+// al dashboard.
+func RequirePagePlatform() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if u := currentUser(c); u == nil || !u.IsPlatform {
+			c.Redirect(http.StatusFound, "/dashboard")
 			c.Abort()
 			return
 		}

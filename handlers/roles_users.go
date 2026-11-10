@@ -42,7 +42,7 @@ func CreateRole(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	r, err := models.CreateRole(orgOf(c), in)
+	r, err := models.CreateRole(currentUser(c), orgOf(c), in)
 	if err != nil {
 		respondError(c, err, "role")
 		return
@@ -60,7 +60,7 @@ func UpdateRole(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	r, err := models.UpdateRole(orgOf(c), id, in)
+	r, err := models.UpdateRole(currentUser(c), orgOf(c), id, in)
 	if err != nil {
 		respondError(c, err, "role")
 		return
@@ -78,7 +78,7 @@ func UpdateRoleStatus(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := models.SetRoleStatus(orgOf(c), id, active); err != nil {
+	if err := models.SetRoleStatus(currentUser(c), orgOf(c), id, active); err != nil {
 		respondError(c, err, "role")
 		return
 	}
@@ -87,6 +87,11 @@ func UpdateRoleStatus(c *gin.Context) {
 
 // ListPermissions — GET /permissions
 func ListPermissions(c *gin.Context) {
+	// Organizations.* solo existe en la organización de plataforma.
+	if !currentUser(c).IsPlatform {
+		c.JSON(http.StatusOK, models.WithoutPlatformPermissions(models.AllPermissions))
+		return
+	}
 	c.JSON(http.StatusOK, models.AllPermissions)
 }
 
@@ -122,7 +127,7 @@ func CreateUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	u, err := models.CreateUser(orgOf(c), in)
+	u, err := models.CreateUser(currentUser(c), orgOf(c), in)
 	if err != nil {
 		respondError(c, err, "user")
 		return
@@ -140,13 +145,13 @@ func UpdateUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	u, err := models.UpdateUser(orgOf(c), id, in)
+	u, err := models.UpdateUser(currentUser(c), orgOf(c), id, in)
 	if err != nil {
 		respondError(c, err, "user")
 		return
 	}
 	if in.Active != nil && *in.Active != u.Active {
-		if err := models.SetUserStatus(orgOf(c), id, *in.Active); err != nil {
+		if err := models.SetUserStatus(currentUser(c), orgOf(c), id, *in.Active); err != nil {
 			respondError(c, err, "user")
 			return
 		}
@@ -169,7 +174,7 @@ func UpdateUserStatus(c *gin.Context) {
 		problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
 		return
 	}
-	if err := models.SetUserStatus(orgOf(c), id, active); err != nil {
+	if err := models.SetUserStatus(currentUser(c), orgOf(c), id, active); err != nil {
 		respondError(c, err, "user")
 		return
 	}

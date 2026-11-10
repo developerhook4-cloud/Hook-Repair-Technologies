@@ -117,7 +117,7 @@ func CreateOrganizationUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	if _, err := models.CreateUser(id, in); err != nil {
+	if _, err := models.CreateUser(currentUser(c), id, in); err != nil {
 		respondError(c, err, "user")
 		return
 	}
@@ -138,7 +138,7 @@ func UpdateOrganizationUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
-	u, err := models.UpdateUser(id, userID, in)
+	u, err := models.UpdateUser(currentUser(c), id, userID, in)
 	if err != nil {
 		respondError(c, err, "user")
 		return
@@ -148,7 +148,7 @@ func UpdateOrganizationUser(c *gin.Context) {
 			problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
 			return
 		}
-		if err := models.SetUserStatus(id, userID, *in.Active); err != nil {
+		if err := models.SetUserStatus(currentUser(c), id, userID, *in.Active); err != nil {
 			respondError(c, err, "user")
 			return
 		}
@@ -170,7 +170,7 @@ func UpdateOrganizationUserStatus(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := models.SetUserStatus(id, userID, active); err != nil {
+	if err := models.SetUserStatus(currentUser(c), id, userID, active); err != nil {
 		respondError(c, err, "user")
 		return
 	}

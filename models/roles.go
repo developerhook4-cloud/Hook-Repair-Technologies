@@ -104,8 +104,14 @@ func roleNameTaken(orgID, name, exceptID string) (bool, error) {
 }
 
 // CreateRole crea un rol nuevo.
-func CreateRole(orgID string, r SaveRoleRequest) (*Role, error) {
+func CreateRole(actor *SessionUser, orgID string, r SaveRoleRequest) (*Role, error) {
 	if err := r.normalize(); err != nil {
+		return nil, err
+	}
+	if err := ensureNoPlatformPermissions(orgID, r.Permissions); err != nil {
+		return nil, err
+	}
+	if err := ensureCanGrant(actor, r.Permissions); err != nil {
 		return nil, err
 	}
 	taken, err := roleNameTaken(orgID, r.Name, "")
@@ -124,11 +130,21 @@ func CreateRole(orgID string, r SaveRoleRequest) (*Role, error) {
 }
 
 // UpdateRole cambia nombre y permisos.
-func UpdateRole(orgID, roleID string, r SaveRoleRequest) (*Role, error) {
+func UpdateRole(actor *SessionUser, orgID, roleID string, r SaveRoleRequest) (*Role, error) {
 	if err := r.normalize(); err != nil {
 		return nil, err
 	}
-	if _, err := GetRole(orgID, roleID); err != nil {
+	if err := ensureNoPlatformPermissions(orgID, r.Permissions); err != nil {
+		return nil, err
+	}
+	current, err := GetRole(orgID, roleID)
+	if err != nil {
+		return nil, err
+	}
+	if err := ensureCanTouchRole(actor, orgID, current); err != nil {
+		return nil, err
+	}
+	if err := ensureCanGrant(actor, r.Permissions); err != nil {
 		return nil, err
 	}
 	taken, err := roleNameTaken(orgID, r.Name, roleID)
@@ -151,13 +167,20 @@ func UpdateRole(orgID, roleID string, r SaveRoleRequest) (*Role, error) {
 }
 
 // SetRoleStatus activa o desactiva un rol.
-func SetRoleStatus(orgID, roleID string, active bool) error {
+func SetRoleStatus(actor *SessionUser, orgID, roleID string, active bool) error {
+	role, err := GetRole(orgID, roleID)
+	if err != nil {
+		return err
+	}
+	if err := ensureCanTouchRole(actor, orgID, role); err != nil {
+		return err
+	}
 	if !active {
 		if err := ensureAdminRemains(orgID, "", roleID); err != nil {
 			return err
 		}
 	}
-	_, err := db.DB.Exec(`UPDATE roles SET active=? WHERE organization_id=? AND id=?`, active, orgID, roleID)
+	_, err = db.DB.Exec(`UPDATE roles SET active=? WHERE organization_id=? AND id=?`, active, orgID, roleID)
 	return err
 }
 

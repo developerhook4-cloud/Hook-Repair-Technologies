@@ -52,21 +52,29 @@ func DeleteCatalogRecord(kind, orgID, id string) error {
 }
 
 // DeleteUser elimina un usuario (no puede ser el último administrador).
-func DeleteUser(orgID, userID string) error {
-	if _, err := GetUser(orgID, userID); err != nil {
+func DeleteUser(actor *SessionUser, orgID, userID string) error {
+	u, err := GetUser(orgID, userID)
+	if err != nil {
+		return err
+	}
+	if err := ensureCanTouchUser(actor, orgID, u); err != nil {
 		return err
 	}
 	if err := ensureAdminRemains(orgID, userID, ""); err != nil {
 		return err
 	}
-	_, err := db.DB.Exec(`UPDATE users SET deleted_at = UTC_TIMESTAMP(), active = 0
+	_, err = db.DB.Exec(`UPDATE users SET deleted_at = UTC_TIMESTAMP(), active = 0
 		WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, userID)
 	return err
 }
 
 // DeleteRole elimina un rol que ya no tenga usuarios.
-func DeleteRole(orgID, roleID string) error {
-	if _, err := GetRole(orgID, roleID); err != nil {
+func DeleteRole(actor *SessionUser, orgID, roleID string) error {
+	role, err := GetRole(orgID, roleID)
+	if err != nil {
+		return err
+	}
+	if err := ensureCanTouchRole(actor, orgID, role); err != nil {
 		return err
 	}
 	var users int
@@ -77,7 +85,7 @@ func DeleteRole(orgID, roleID string) error {
 	if users > 0 {
 		return Conflict("No se puede eliminar el rol porque tiene %d usuario(s) asignado(s). Cámbialos de rol primero.", users)
 	}
-	_, err := db.DB.Exec(`UPDATE roles SET deleted_at = UTC_TIMESTAMP(), active = 0
+	_, err = db.DB.Exec(`UPDATE roles SET deleted_at = UTC_TIMESTAMP(), active = 0
 		WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, roleID)
 	return err
 }

@@ -30,6 +30,12 @@ func migrate() {
 			mustExec("ALTER TABLE " + t + " ADD COLUMN deleted_at DATETIME NULL")
 		}
 	}
+	// Organización de plataforma: la del superadmin raíz (admin@hookrepair.com);
+	// si no existe ese usuario, la organización de menor id.
+	if !columnExists("organizations", "is_platform") {
+		mustExec("ALTER TABLE organizations ADD COLUMN is_platform TINYINT(1) NOT NULL DEFAULT 0")
+		markPlatformOrganization()
+	}
 	// UNIQUE que ignora lo eliminado (permite volver a usar el nombre / email).
 	live := []struct{ table, col, src, typ, index, cols string }{
 		{"users", "email_live", "email", "VARCHAR(255)", "uq_users_email", "email_live"},
@@ -44,6 +50,20 @@ func migrate() {
 		mustExec("ALTER TABLE " + l.table + " ADD COLUMN " + l.col + " " + l.typ +
 			" GENERATED ALWAYS AS (IF(deleted_at IS NULL, " + l.src + ", NULL)) STORED")
 		mustExec("ALTER TABLE " + l.table + " DROP INDEX " + l.index + ", ADD UNIQUE KEY " + l.index + " (" + l.cols + ")")
+	}
+}
+
+// markPlatformOrganization marca como de plataforma la organización de
+// admin@hookrepair.com y, si no hay ninguna marcada, la de menor id.
+func markPlatformOrganization() {
+	mustExec(`UPDATE organizations SET is_platform = 1
+		WHERE id IN (SELECT organization_id FROM users WHERE email = 'admin@hookrepair.com' AND deleted_at IS NULL)`)
+	var marked int
+	if err := DB.QueryRow(`SELECT COUNT(*) FROM organizations WHERE is_platform = 1`).Scan(&marked); err != nil {
+		log.Fatalf("Error revisando la organización de plataforma: %v", err)
+	}
+	if marked == 0 {
+		mustExec(`UPDATE organizations SET is_platform = 1 ORDER BY id LIMIT 1`)
 	}
 }
 

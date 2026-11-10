@@ -115,7 +115,7 @@ func setupRouter() *gin.Engine {
 	pages := router.Group("/", h.RequirePage())
 	{
 		pages.GET("/dashboard", h.Page("dashboard", "Dashboard", ""))
-		pages.GET("/organizations", h.RequirePagePermission(models.ViewOrganizations),
+		pages.GET("/organizations", h.RequirePagePlatform(), h.RequirePagePermission(models.ViewOrganizations),
 			h.Page("organizations", "Organizaciones", "/static/js/organizations/organizations.js"))
 		pages.GET("/point-of-sale", h.ComingSoon("Punto de venta", ""))
 		pages.GET("/repairs", h.ComingSoon("Reparaciones", ""))
@@ -170,10 +170,13 @@ func setupRouter() *gin.Engine {
 	// Perfil del usuario con sesión.
 	api.PUT("/users/me", h.UpdateProfile)
 
-	// Organizaciones (plataforma). "mine" va antes que :id.
+	// Organizaciones (plataforma). "mine" va antes que :id. GET /mine lo puede
+	// leer cualquier usuario con sesión; PUT /mine solo los administradores.
 	api.GET("/organizations/mine", h.GetMyOrganization)
-	api.PUT("/organizations/mine", h.UpdateMyOrganization)
-	orgs := api.Group("/organizations")
+	api.PUT("/organizations/mine", h.RequireOrgAdmin(), h.UpdateMyOrganization)
+	// Solo la organización de plataforma (is_platform) puede usar estas rutas,
+	// además del permiso Organizations.* de cada una.
+	orgs := api.Group("/organizations", h.RequirePlatform())
 	orgs.GET("", h.RequirePermission(models.ViewOrganizations), h.ListOrganizations)
 	orgs.POST("", h.RequirePermission(models.UpdateOrganizations), h.CreateOrganization)
 	orgs.GET("/:id", h.RequirePermission(models.ViewOrganizations), h.GetOrganization)
