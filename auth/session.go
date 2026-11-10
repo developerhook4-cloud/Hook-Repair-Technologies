@@ -51,18 +51,21 @@ func InitStore() {
 		MaxAge:   sessionMaxAge,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   strings.EqualFold(os.Getenv("COOKIE_SECURE"), "true"),
+		Secure:   cookieSecure(),
 	}
 }
 
-// Login guarda el id del usuario en la sesión.
-func Login(w http.ResponseWriter, r *http.Request, userID string) error {
+// Login guarda en la sesión el id del usuario y su versión de sesiones
+// (users.session_version): si luego cambia en la base, la cookie deja de valer.
+func Login(w http.ResponseWriter, r *http.Request, userID string, version int64) error {
 	s, _ := Store.Get(r, SessionName)
 	s.Values["user_id"] = userID
+	s.Values["sv"] = version
 	return s.Save(r, w)
 }
 
-// Logout borra la sesión.
+// Logout borra la sesión (la cookie del navegador). Invalidar las demás
+// cookies del usuario es aparte: models.InvalidateSessions.
 func Logout(w http.ResponseWriter, r *http.Request) error {
 	s, _ := Store.Get(r, SessionName)
 	s.Values = map[any]any{}
@@ -72,10 +75,25 @@ func Logout(w http.ResponseWriter, r *http.Request) error {
 
 // UserID devuelve el id guardado en la sesión ("" si no hay sesión).
 func UserID(r *http.Request) string {
+	id, _ := Session(r)
+	return id
+}
+
+// Session devuelve el id y la versión de sesiones guardados en la cookie ("" y 0
+// si no hay sesión). Una cookie emitida antes de existir la versión no la trae:
+// cuenta como 0, que es el valor inicial de la base.
+func Session(r *http.Request) (userID string, version int64) {
 	s, err := Store.Get(r, SessionName)
 	if err != nil {
-		return ""
+		return "", 0
 	}
-	id, _ := s.Values["user_id"].(string)
-	return id
+	userID, _ = s.Values["user_id"].(string)
+	version, _ = s.Values["sv"].(int64)
+	return userID, version
+}
+
+// cookieSecure — la cookie solo viaja por HTTPS: siempre en producción, y fuera
+// de producción cuando COOKIE_SECURE=true.
+func cookieSecure() bool {
+	return env.IsProduction() || strings.EqualFold(os.Getenv("COOKIE_SECURE"), "true")
 }

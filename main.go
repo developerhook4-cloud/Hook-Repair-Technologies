@@ -98,8 +98,9 @@ func setupRouter() *gin.Engine {
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery())
 	// Railway (y cualquier proxy) termina el HTTPS y reenvía la IP original.
-	_ = router.SetTrustedProxies([]string{"10.0.0.0/8", "100.64.0.0/10", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.1"})
-	router.Use(h.SecurityHeaders(), h.LoadUser())
+	_ = router.SetTrustedProxies(h.TrustedProxies)
+	// SameOrigin (anti-CSRF) va antes de LoadUser: rechaza sin tocar la base.
+	router.Use(h.SecurityHeaders(), h.SameOrigin(), h.LoadUser())
 
 	router.SetHTMLTemplate(loadTemplates())
 	router.Static("/static", "./static")
@@ -110,7 +111,9 @@ func setupRouter() *gin.Engine {
 	// ── Páginas ────────────────────────────────────────────────────────
 	router.GET("/", h.Home)
 	router.GET("/login", h.LoginPage)
-	router.GET("/logout", h.LogoutPage)
+	// GET /logout no cierra sesión (CSRF): solo redirige. Salir es POST /logout.
+	router.GET("/logout", h.LogoutRedirect)
+	router.POST("/logout", h.LogoutPage)
 
 	pages := router.Group("/", h.RequirePage())
 	{

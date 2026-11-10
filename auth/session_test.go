@@ -47,7 +47,7 @@ func TestInitStoreSinSecretFuncionaYCaducaA7Dias(t *testing.T) {
 	InitStore()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	if err := Login(rec, req, "42"); err != nil {
+	if err := Login(rec, req, "42", 7); err != nil {
 		t.Fatal(err)
 	}
 	back := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -57,8 +57,8 @@ func TestInitStoreSinSecretFuncionaYCaducaA7Dias(t *testing.T) {
 			t.Errorf("MaxAge de la cookie = %d, quiero %d", c.MaxAge, 86400*7)
 		}
 	}
-	if id := UserID(back); id != "42" {
-		t.Fatalf("user_id = %q, quiero 42", id)
+	if id, v := Session(back); id != "42" || v != 7 {
+		t.Fatalf("sesión = (%q, %d), quiero (42, 7)", id, v)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestInitStoreClaveAleatoriaDistintaCadaVez(t *testing.T) {
 	login := func() *http.Cookie {
 		InitStore()
 		rec := httptest.NewRecorder()
-		if err := Login(rec, httptest.NewRequest(http.MethodGet, "/", nil), "1"); err != nil {
+		if err := Login(rec, httptest.NewRequest(http.MethodGet, "/", nil), "1", 0); err != nil {
 			t.Fatal(err)
 		}
 		return rec.Result().Cookies()[0]
@@ -106,5 +106,57 @@ func TestInitStoreProduccionConSecretValido(t *testing.T) {
 	InitStore()
 	if Store == nil {
 		t.Fatal("Store nulo")
+	}
+}
+
+// La cookie es Secure en producción aunque COOKIE_SECURE no esté definida, y
+// fuera de producción solo con COOKIE_SECURE=true.
+func TestCookieSecure(t *testing.T) {
+	cases := []struct {
+		name         string
+		appEnv, flag string
+		want         bool
+	}{
+		{"local sin flag", "", "", false},
+		{"local con COOKIE_SECURE=true", "", "true", true},
+		{"produccion sin flag", "production", "", true},
+		{"produccion con COOKIE_SECURE=false", "production", "false", true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			clearEnv(t)
+			t.Setenv("APP_ENV", tc.appEnv)
+			t.Setenv("COOKIE_SECURE", tc.flag)
+			t.Setenv("SESSION_SECRET", "0123456789abcdef0123456789abcdef")
+			InitStore()
+			if Store.Options.Secure != tc.want {
+				t.Fatalf("Secure = %v, quiero %v", Store.Options.Secure, tc.want)
+			}
+			rec := httptest.NewRecorder()
+			if err := Login(rec, httptest.NewRequest(http.MethodGet, "/", nil), "1", 0); err != nil {
+				t.Fatal(err)
+			}
+			if got := rec.Result().Cookies()[0].Secure; got != tc.want {
+				t.Fatalf("cookie Secure = %v, quiero %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// Una cookie emitida antes de existir la versión de sesiones (sin "sv") cuenta como 0.
+func TestSessionSinVersionEsCero(t *testing.T) {
+	clearEnv(t)
+	InitStore()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	s, _ := Store.Get(req, SessionName)
+	s.Values["user_id"] = "9"
+	if err := s.Save(req, rec); err != nil {
+		t.Fatal(err)
+	}
+	back := httptest.NewRequest(http.MethodGet, "/", nil)
+	back.AddCookie(rec.Result().Cookies()[0])
+	if id, v := Session(back); id != "9" || v != 0 {
+		t.Fatalf("sesión = (%q, %d), quiero (9, 0)", id, v)
 	}
 }

@@ -55,6 +55,9 @@ CREATE TABLE IF NOT EXISTS users (
   email           VARCHAR(255) NOT NULL,
   password_hash   VARCHAR(255) NOT NULL,
   active          TINYINT(1)   NOT NULL DEFAULT 1,
+  -- Versión de las sesiones: cada cookie lleva la que tenía al iniciar sesión y
+  -- se invalida si cambia (logout, cambio de contraseña, desactivar, eliminar).
+  session_version INT          NOT NULL DEFAULT 0,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   deleted_at      DATETIME     NULL,
   email_live      VARCHAR(255) GENERATED ALWAYS AS (IF(deleted_at IS NULL, email, NULL)) STORED,

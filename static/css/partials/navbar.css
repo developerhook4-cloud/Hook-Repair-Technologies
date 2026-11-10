@@ -50,4 +50,7 @@
 .userbar__divider { height: 1px; margin: 6px 4px; background: var(--line); }
 .userbar__link--logout, .userbar__link--logout i { color: #c0392b; }
 .userbar__link--logout:hover { background: #fdecea; color: #c0392b; }
+/* Cerrar sesión es un formulario POST (un GET que cierra sesión permite CSRF): el botón se ve como los demás enlaces. */
+.logout-form { display: contents; margin: 0; }
+button.userbar__link { width: 100%; box-sizing: border-box; border: 0; background: transparent; font-family: inherit; line-height: inherit; text-align: left; cursor: pointer; }
 .userbar__link--logout:hover i { color: #c0392b; }
