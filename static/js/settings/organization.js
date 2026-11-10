@@ -13,6 +13,7 @@
     form.classList.toggle('is-wide', collapsed);
   }
   document.addEventListener('hook:sidebar', (e) => applyLayout(e.detail.collapsed));
+  applyLayout(document.documentElement.classList.contains('sidebar-shrink'));
 
   const v = ui.validator(
     form,
