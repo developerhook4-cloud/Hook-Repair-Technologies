@@ -127,25 +127,50 @@ func (r *ProductRequest) validateCommon() error {
 // validateReferences revisa que categoría, marca, proveedor y modelos existan
 // y estén activos en la organización (y que los modelos sean de esa marca).
 func (r *ProductRequest) validateReferences(orgID string, modelIDs []string) error {
+	// Cada mensaje nombra el campo que falla (KAN-94): un registro eliminado ya
+	// no existe para la validación, y uno inactivo no se puede elegir.
 	if id := idOrNil(r.CategoryID); id != nil {
-		if c, err := GetCategory(orgID, id.(string)); err != nil || !c.Active {
-			return Invalid("La categoría no existe o está inactiva.")
+		c, err := GetCategory(orgID, id.(string))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("La categoría seleccionada ya no existe; elige otra.")
+		case err != nil:
+			return err
+		case !c.Active:
+			return Invalid("La categoría seleccionada está inactiva; elige otra.")
 		}
 	}
 	if id := idOrNil(r.BrandID); id != nil {
-		if b, err := GetBrand(orgID, id.(string)); err != nil || !b.Active {
-			return Invalid("La marca no existe o está inactiva.")
+		b, err := GetBrand(orgID, id.(string))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("La marca seleccionada ya no existe; elige otra.")
+		case err != nil:
+			return err
+		case !b.Active:
+			return Invalid("La marca seleccionada está inactiva; elige otra.")
 		}
 	}
 	if id := idOrNil(r.SupplierID); id != nil {
-		if s, err := GetSupplier(orgID, id.(string)); err != nil || !s.Active {
-			return Invalid("El proveedor no existe o está inactivo.")
+		s, err := GetSupplier(orgID, id.(string))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("El proveedor seleccionado ya no existe; elige otro.")
+		case err != nil:
+			return err
+		case !s.Active:
+			return Invalid("El proveedor seleccionado está inactivo; elige otro.")
 		}
 	}
 	for _, mid := range modelIDs {
 		m, err := GetDeviceModel(orgID, mid)
-		if err != nil || !m.Active {
-			return Invalid("El modelo no existe o está inactivo.")
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("Un modelo seleccionado ya no existe; quítalo o elige otro.")
+		case err != nil:
+			return err
+		case !m.Active:
+			return Invalid("El modelo %s está inactivo; quítalo o elige otro.", m.Name)
 		}
 		if b := idOrNil(r.BrandID); b != nil && m.BrandID != b.(string) {
 			return Invalid("El modelo %s no pertenece a la marca seleccionada.", m.Name)

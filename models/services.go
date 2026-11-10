@@ -104,19 +104,26 @@ func (r *SaveServiceRequest) validate(orgID string) error {
 			return Invalid("El %s es obligatorio y debe ser 0 o mayor.", p.label)
 		}
 	}
+	// Cada mensaje nombra el campo que falla (KAN-94).
 	if id := idOrNil(r.CategoryID); id != nil {
-		if _, err := GetCategory(orgID, id.(string)); err != nil {
-			return Invalid("La categoría no existe en esta organización.")
+		if _, err := GetCategory(orgID, id.(string)); errors.Is(err, ErrNotFound) {
+			return Invalid("La categoría seleccionada ya no existe; elige otra.")
+		} else if err != nil {
+			return err
 		}
 	}
 	if id := idOrNil(r.BrandID); id != nil {
-		if _, err := GetBrand(orgID, id.(string)); err != nil {
-			return Invalid("La marca no existe en esta organización.")
+		if _, err := GetBrand(orgID, id.(string)); errors.Is(err, ErrNotFound) {
+			return Invalid("La marca seleccionada ya no existe; elige otra.")
+		} else if err != nil {
+			return err
 		}
 	}
 	if id := idOrNil(r.ModelID); id != nil {
-		if _, err := GetDeviceModel(orgID, id.(string)); err != nil {
-			return Invalid("El modelo no existe en esta organización.")
+		if _, err := GetDeviceModel(orgID, id.(string)); errors.Is(err, ErrNotFound) {
+			return Invalid("El modelo seleccionado ya no existe; elige otro.")
+		} else if err != nil {
+			return err
 		}
 	}
 	return nil

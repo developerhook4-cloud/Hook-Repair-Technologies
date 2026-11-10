@@ -124,7 +124,8 @@ func CreateMovement(orgID string, r MovementRequest) (*Movement, error) {
 	var id string
 	err := withTx(func(tx *sql.Tx) error {
 		var stock int
-		err := tx.QueryRow(`SELECT in_stock FROM products WHERE organization_id = ? AND id = ? FOR UPDATE`, orgID, r.ProductID).Scan(&stock)
+		// Un producto eliminado ya no recibe movimientos (KAN-94).
+		err := tx.QueryRow(`SELECT in_stock FROM products WHERE organization_id = ? AND id = ? AND deleted_at IS NULL FOR UPDATE`, orgID, r.ProductID).Scan(&stock)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
