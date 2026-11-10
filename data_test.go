@@ -362,3 +362,85 @@ func TestSerializados_BorrarProductoLiberaIMEI(t *testing.T) {
 	expect(t, "borrar producto", a.do(s.Admin, "DELETE", s.path("/products/"+out.ID), nil), http.StatusOK)
 	expect(t, "recrear con el mismo IMEI", mk(), http.StatusCreated)
 }
+
+// ── KAN-95: rol al crear / editar usuarios de una organización (plataforma) ──
+
+func TestPlataformaAsignaRolAUsuariosDeOrganizacion(t *testing.T) {
+	s := newShop(t)
+	other := newShop(t)
+	a := s.app
+	plat := a.login(t, seedAdminEmail, seedAdminPassword)
+	orgUsers := "/api/organizations/" + s.OrgID + "/users"
+
+	// El endpoint de roles de la organización es solo de plataforma.
+	r := a.do(plat, "GET", "/api/organizations/"+s.OrgID+"/roles", nil)
+	expect(t, "GET roles de la organización (plataforma)", r, http.StatusOK)
+	var roles []models.Role
+	r.decode(t, &roles)
+	names := map[string]string{}
+	for _, ro := range roles {
+		names[ro.Name] = ro.ID
+	}
+	for _, n := range []string{"Administrador", "Cajero"} {
+		if names[n] != s.roles[n].ID {
+			t.Errorf("la lista de roles debería traer %s (%s): %v", n, s.roles[n].ID, names)
+		}
+	}
+	expect(t, "GET roles de la organización (taller)", a.do(s.Admin, "GET", "/api/organizations/"+s.OrgID+"/roles", nil), http.StatusForbidden)
+	expect(t, "GET roles de organización inexistente", a.do(plat, "GET", "/api/organizations/99999999/roles", nil), http.StatusNotFound)
+
+	roleOf := func(email string) string {
+		var users []models.User
+		a.do(plat, "GET", orgUsers, nil).decode(t, &users)
+		for _, u := range users {
+			if u.Email == email {
+				return u.RoleName
+			}
+		}
+		return ""
+	}
+	userID := func(email string) string {
+		var users []models.User
+		a.do(plat, "GET", orgUsers, nil).decode(t, &users)
+		for _, u := range users {
+			if u.Email == email {
+				return u.ID
+			}
+		}
+		return ""
+	}
+
+	// Con roleId queda con ese rol; sin roleId, Administrador.
+	email := "cajero" + unique() + "@ejemplo.com"
+	expect(t, "crear usuario con rol Cajero", a.do(plat, "POST", orgUsers,
+		map[string]any{"name": "Caja", "email": email, "password": testPassword, "roleId": s.roles["Cajero"].ID}), http.StatusNoContent)
+	if got := roleOf(email); got != "Cajero" {
+		t.Errorf("el usuario debería quedar como Cajero y es %q", got)
+	}
+	email2 := "sinrol" + unique() + "@ejemplo.com"
+	expect(t, "crear usuario sin rol", a.do(plat, "POST", orgUsers,
+		map[string]any{"name": "Sin rol", "email": email2, "password": testPassword}), http.StatusNoContent)
+	if got := roleOf(email2); got != "Administrador" {
+		t.Errorf("sin roleId debería ser Administrador y es %q", got)
+	}
+
+	// Un rol de otra organización o inválido se rechaza con 400.
+	foreign := a.do(plat, "POST", orgUsers,
+		map[string]any{"name": "Ajeno", "email": "ajeno" + unique() + "@ejemplo.com", "password": testPassword, "roleId": other.roles["Cajero"].ID})
+	expect(t, "crear usuario con rol de otra organización", foreign, http.StatusBadRequest)
+	expect(t, "crear usuario con roleId inválido", a.do(plat, "POST", orgUsers,
+		map[string]any{"name": "Raro", "email": "raro" + unique() + "@ejemplo.com", "password": testPassword, "roleId": "abc"}), http.StatusBadRequest)
+
+	// Editar: cambiar el rol, y un rol ajeno no.
+	id := userID(email)
+	expect(t, "editar rol a Gerente", a.do(plat, "PUT", orgUsers+"/"+id,
+		map[string]any{"name": "Caja", "email": email, "roleId": s.roles["Gerente"].ID}), http.StatusNoContent)
+	if got := roleOf(email); got != "Gerente" {
+		t.Errorf("el usuario debería quedar como Gerente y es %q", got)
+	}
+	expect(t, "editar con rol de otra organización", a.do(plat, "PUT", orgUsers+"/"+id,
+		map[string]any{"name": "Caja", "email": email, "roleId": other.roles["Cajero"].ID}), http.StatusBadRequest)
+	if got := roleOf(email); got != "Gerente" {
+		t.Errorf("el rol no debió cambiar: %q", got)
+	}
+}
