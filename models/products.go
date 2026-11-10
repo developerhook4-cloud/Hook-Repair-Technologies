@@ -253,7 +253,7 @@ func fillProductDetails(list []*Product) error {
 	}
 	rows.Close()
 
-	rows, err = db.DB.Query(`SELECT product_id, imei FROM product_serials WHERE product_id IN (`+in+`) ORDER BY imei`, anySlice(ids)...)
+	rows, err = db.DB.Query(`SELECT product_id, imei FROM product_serials WHERE product_id IN (`+in+`) AND deleted_at IS NULL ORDER BY imei`, anySlice(ids)...)
 	if err != nil {
 		return err
 	}
@@ -362,6 +362,11 @@ func CreateProduct(orgID string, r ProductRequest) (*Product, error) {
 	serials, err := cleanSerials(r.SerialNumbers)
 	if err != nil {
 		return nil, err
+	}
+	// En un producto serializado hay un IMEI por cada pieza del stock, siempre
+	// (también con stock 0: cero IMEI). KAN-144.
+	if serialized && inStock == 0 && len(serials) > 0 {
+		return nil, Invalid("Con stock inicial 0 no se pueden registrar IMEI / series (llevas %d).", len(serials))
 	}
 	if serialized && inStock > 0 && len(serials) != inStock {
 		return nil, Invalid("Ingresa los %d IMEI / series del stock inicial (llevas %d).", inStock, len(serials))

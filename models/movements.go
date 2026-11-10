@@ -124,13 +124,20 @@ func CreateMovement(orgID string, r MovementRequest) (*Movement, error) {
 	var id string
 	err := withTx(func(tx *sql.Tx) error {
 		var stock int
+		var serialized bool
 		// Un producto eliminado ya no recibe movimientos (KAN-94).
-		err := tx.QueryRow(`SELECT in_stock FROM products WHERE organization_id = ? AND id = ? AND deleted_at IS NULL FOR UPDATE`, orgID, r.ProductID).Scan(&stock)
+		err := tx.QueryRow(`SELECT in_stock, is_serialized FROM products WHERE organization_id = ? AND id = ? AND deleted_at IS NULL FOR UPDATE`, orgID, r.ProductID).Scan(&stock, &serialized)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
 		if err != nil {
 			return err
+		}
+		// Un movimiento cambiaría el stock sin tocar sus IMEI: el stock de un
+		// producto serializado siempre es igual a su número de IMEI (KAN-144).
+		// Mientras los movimientos no capturen IMEI (KAN-137) se rechazan.
+		if serialized {
+			return Invalid("Los productos serializados se ajustan editando sus números de serie (IMEI).")
 		}
 		delta := r.Quantity
 		if t == MovementExit {

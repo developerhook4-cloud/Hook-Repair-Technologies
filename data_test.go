@@ -300,3 +300,65 @@ func TestValidaciones_NoDesactivarseConPUT(t *testing.T) {
 		}
 	}
 }
+
+// ── KAN-144: productos serializados (IMEI) ─────────────────────────────
+
+func TestSerializados_StockCeroNoGuardaIMEI(t *testing.T) {
+	s := newShop(t)
+	a := s.app
+	imei := "IMEI" + unique()
+	expect(t, "stock 0 con 1 IMEI", a.do(s.Admin, "POST", s.path("/products"),
+		productBody(map[string]any{"isSerialized": true, "inStock": 0, "serialNumbers": []string{imei}})), http.StatusBadRequest)
+	expect(t, "stock 2 con 1 IMEI", a.do(s.Admin, "POST", s.path("/products"),
+		productBody(map[string]any{"isSerialized": true, "inStock": 2, "serialNumbers": []string{imei}})), http.StatusBadRequest)
+	// Stock 0 sin IMEI y stock 2 con 2 IMEI sí.
+	pid := s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 0})
+	if p := s.getProduct(t, pid); len(p.SerialNumbers) != 0 || p.InStock != 0 {
+		t.Errorf("producto serializado con stock 0: %+v", p)
+	}
+	pid = s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 2, "serialNumbers": []string{imei, imei + "b"}})
+	if p := s.getProduct(t, pid); len(p.SerialNumbers) != 2 || p.InStock != 2 {
+		t.Errorf("producto serializado con stock 2: %+v", p)
+	}
+}
+
+func TestSerializados_MovimientoManualRechazado(t *testing.T) {
+	s := newShop(t)
+	a := s.app
+	imei := "IMEI" + unique()
+	pid := s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 3, "serialNumbers": []string{imei + "a", imei + "b", imei + "c"}})
+	for _, mv := range []map[string]any{
+		{"productId": pid, "type": "Entry", "quantity": 5},
+		{"productId": pid, "type": "Exit", "quantity": 1},
+		{"productId": pid, "type": "Adjustment", "quantity": -1},
+	} {
+		r := a.do(s.Admin, "POST", s.path("/inventory/movements"), mv)
+		expect(t, "movimiento manual sobre serializado "+mv["type"].(string), r, http.StatusBadRequest)
+		if !strings.Contains(r.String(), "serializados") {
+			t.Errorf("el mensaje debería explicar la regla: %s", r)
+		}
+	}
+	if p := s.getProduct(t, pid); p.InStock != 3 || len(p.SerialNumbers) != 3 {
+		t.Errorf("el stock no debió cambiar: %+v", p)
+	}
+	// Un producto normal sigue aceptando movimientos.
+	plain := s.newProduct(t, nil)
+	expect(t, "movimiento sobre producto normal", a.do(s.Admin, "POST", s.path("/inventory/movements"),
+		map[string]any{"productId": plain, "type": "Entry", "quantity": 5}), http.StatusCreated)
+}
+
+func TestSerializados_BorrarProductoLiberaIMEI(t *testing.T) {
+	s := newShop(t)
+	a := s.app
+	imei := "IMEI" + unique()
+	mk := func() resp {
+		return a.do(s.Admin, "POST", s.path("/products"), productBody(map[string]any{"isSerialized": true, "inStock": 1, "serialNumbers": []string{imei}}))
+	}
+	first := mk()
+	expect(t, "crear producto con IMEI", first, http.StatusCreated)
+	expect(t, "IMEI repetido en producto vivo", mk(), http.StatusConflict)
+	var out struct{ ID string }
+	first.decode(t, &out)
+	expect(t, "borrar producto", a.do(s.Admin, "DELETE", s.path("/products/"+out.ID), nil), http.StatusOK)
+	expect(t, "recrear con el mismo IMEI", mk(), http.StatusCreated)
+}

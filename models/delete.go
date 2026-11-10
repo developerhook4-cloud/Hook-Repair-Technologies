@@ -47,6 +47,12 @@ func DeleteCatalogRecord(kind, orgID, id string) error {
 			_, err = tx.Exec(`UPDATE device_models SET deleted_at = UTC_TIMESTAMP(), active = 0
 				WHERE organization_id = ? AND brand_id = ? AND deleted_at IS NULL`, orgID, id)
 		}
+		// Las series (IMEI) de un producto eliminado se liberan para poder
+		// registrarlas de nuevo (KAN-144).
+		if kind == "products" {
+			_, err = tx.Exec(`UPDATE product_serials SET deleted_at = UTC_TIMESTAMP()
+				WHERE organization_id = ? AND product_id = ? AND deleted_at IS NULL`, orgID, id)
+		}
 		return err
 	})
 }

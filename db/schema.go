@@ -40,12 +40,20 @@ func migrate() {
 	if !columnExists("users", "session_version") {
 		mustExec("ALTER TABLE users ADD COLUMN session_version INT NOT NULL DEFAULT 0")
 	}
-	// UNIQUE que ignora lo eliminado (permite volver a usar el nombre / email).
+	// Series (IMEI) de productos eliminados (KAN-144): también llevan deleted_at, y las
+	// de productos que ya estaban eliminados se marcan una sola vez al agregar la columna.
+	if !columnExists("product_serials", "deleted_at") {
+		mustExec("ALTER TABLE product_serials ADD COLUMN deleted_at DATETIME NULL")
+		mustExec(`UPDATE product_serials s JOIN products p ON p.id = s.product_id
+			SET s.deleted_at = p.deleted_at WHERE p.deleted_at IS NOT NULL`)
+	}
+	// UNIQUE que ignora lo eliminado (permite volver a usar el nombre / email / IMEI).
 	live := []struct{ table, col, src, typ, index, cols string }{
 		{"users", "email_live", "email", "VARCHAR(255)", "uq_users_email", "email_live"},
 		{"categories", "name_live", "name", "VARCHAR(150)", "uq_categories_name", "organization_id, name_live"},
 		{"brands", "name_live", "name", "VARCHAR(150)", "uq_brands_name", "organization_id, name_live"},
 		{"device_models", "name_live", "name", "VARCHAR(150)", "uq_device_models_name", "organization_id, brand_id, name_live"},
+		{"product_serials", "imei_live", "imei", "VARCHAR(100)", "uq_product_serials_imei", "organization_id, imei_live"},
 	}
 	for _, l := range live {
 		if columnExists(l.table, l.col) {

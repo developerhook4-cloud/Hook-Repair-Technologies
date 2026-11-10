@@ -340,9 +340,10 @@
           <div class="body-small serial-box__grid">${serials.map((s, i) => `<div><span class="serial-num">#${i + 1}:</span> ${esc(s)}</div>`).join('')}</div>`;
         return;
       }
+      // Recorta antes de salir: con stock 0 no debe quedar ningún IMEI capturado.
+      serials = serials.slice(0, stock);
       serialBox.hidden = !(serialized && stock > 0);
       if (serialBox.hidden) return;
-      serials = serials.slice(0, stock);
       while (serials.length < stock) serials.push('');
       serialBox.innerHTML = `
         <p class="label-small serial-box__title">Ingresa los ${stock} IMEI / Series para el stock actual:</p>
@@ -386,7 +387,8 @@
           generalSalePrice: Math.round(numOr0(f.generalSalePrice) * 100) / 100,
           distributorSalePrice: Math.round(numOr0(f.distributorSalePrice) * 100) / 100,
           isSerialized: editing ? p.isSerialized : f.isSerialized,
-          serialNumbers: editing ? [] : serials.map((s) => s.trim()).filter(Boolean),
+          // Un producto serializado lleva un IMEI por pieza del stock; si no es serializado o el stock es 0, ninguno.
+          serialNumbers: editing || !f.isSerialized ? [] : serials.slice(0, Math.max(0, Math.trunc(numOr0(f.inStock)))).map((s) => s.trim()).filter(Boolean),
           active: true,
         };
         try {
