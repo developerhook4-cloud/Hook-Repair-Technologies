@@ -17,7 +17,7 @@ pestaña **Query** de MySQL en Railway.
 
 ## Pruebas
 
-Requiere **Go 1.27.3** o más nuevo (es la versión de `go.mod`; con `GOTOOLCHAIN=auto`
+Requiere **Go 1.27.4** o más nuevo (es la versión de `go.mod`; con `GOTOOLCHAIN=auto`
 Go la descarga solo).
 
 Las pruebas unitarias corren sin nada extra. Las de integración usan MySQL y se
