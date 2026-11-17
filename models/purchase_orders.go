@@ -34,6 +34,9 @@ type PurchaseOrderLine struct {
 	UnitCost    float64 `json:"unitCost"`
 	Subtotal    float64 `json:"subtotal"`
 	LineTotal   float64 `json:"lineTotal"` // alias de subtotal (lo usa el modal de detalle)
+	// IsSerialized y PendingQuantity: el modal de recepción pide un IMEI por pieza pendiente (KAN-137).
+	IsSerialized    bool `json:"isSerialized"`
+	PendingQuantity int  `json:"pendingQuantity"`
 }
 
 // PurchaseOrder — tabla purchase_orders con proveedor, usuario y renglones.
@@ -193,7 +196,9 @@ func fillPurchaseOrderLines(list []*PurchaseOrder) error {
 		byID[o.ID] = o
 		ids = append(ids, o.ID)
 	}
-	rows, err := db.DB.Query(`SELECT l.purchase_order_id, l.id, l.product_id, COALESCE(p.name, ''), l.quantity, l.unit_cost
+	rows, err := db.DB.Query(`SELECT l.purchase_order_id, l.id, l.product_id, COALESCE(p.name, ''), l.quantity, l.unit_cost,
+		       COALESCE(p.is_serialized, 0),
+		       l.quantity - COALESCE((SELECT SUM(g.received_quantity) FROM goods_receipt_lines g WHERE g.purchase_order_line_id = l.id), 0)
 		FROM purchase_order_lines l LEFT JOIN products p ON p.id = l.product_id
 		WHERE l.purchase_order_id IN (`+placeholders(len(ids))+`) ORDER BY p.name`, anySlice(ids)...)
 	if err != nil {
@@ -203,7 +208,7 @@ func fillPurchaseOrderLines(list []*PurchaseOrder) error {
 	for rows.Next() {
 		var poID string
 		var l PurchaseOrderLine
-		if err := rows.Scan(&poID, &l.ID, &l.ProductID, &l.ProductName, &l.Quantity, &l.UnitCost); err != nil {
+		if err := rows.Scan(&poID, &l.ID, &l.ProductID, &l.ProductName, &l.Quantity, &l.UnitCost, &l.IsSerialized, &l.PendingQuantity); err != nil {
 			return err
 		}
 		sub := math.Round(float64(l.Quantity)*l.UnitCost*100) / 100
@@ -335,6 +340,8 @@ type GoodsReceipt struct {
 type GoodsReceiptLineRequest struct {
 	PurchaseOrderLineID string `json:"purchaseOrderLineId"`
 	ReceivedQuantity    *int   `json:"receivedQuantity"`
+	// Serials — un IMEI por pieza recibida; obligatorio en productos serializados (KAN-137).
+	Serials []string `json:"serials"`
 }
 
 // GoodsReceiptRequest — si Lines viene null se recibe todo lo pendiente.
@@ -515,7 +522,17 @@ func CreateGoodsReceipt(orgID, userID string, r GoodsReceiptRequest) (*GoodsRece
 		}
 		rows.Close()
 
+		// Recibir "todo lo pendiente" sin renglones no sirve si hay serializados:
+		// cada pieza necesita su IMEI (KAN-137).
+		if r.Lines == nil {
+			for _, l := range lines {
+				if l.serialized && l.qty-l.received > 0 {
+					return Invalid("%s es serializado: captura los IMEI de cada pieza para recibirlo.", l.productName)
+				}
+			}
+		}
 		requested := map[string]*int{}
+		serialsOf := map[string][]string{}
 		if r.Lines != nil {
 			known := map[string]bool{}
 			for _, l := range lines {
@@ -526,6 +543,8 @@ func CreateGoodsReceipt(orgID, userID string, r GoodsReceiptRequest) (*GoodsRece
 					return Invalid("El renglón %s no pertenece a la orden de compra.", l.PurchaseOrderLineID)
 				}
 				requested[l.PurchaseOrderLineID] = l.ReceivedQuantity
+				serialsOf[l.PurchaseOrderLineID] = l.Serials
+				serialsOf[l.PurchaseOrderLineID] = l.Serials
 			}
 		}
 
@@ -556,7 +575,15 @@ func CreateGoodsReceipt(orgID, userID string, r GoodsReceiptRequest) (*GoodsRece
 				continue
 			}
 			if l.serialized {
-				return Invalid("%s es serializado; todavía no se pueden recibir productos serializados.", l.productName)
+				serials, err := serialsForQuantity(serialsOf[l.id], qty, l.productName)
+				if err != nil {
+					return err
+				}
+				if err := insertSerials(tx, orgID, l.productID, serials); err != nil {
+					return err
+				}
+			} else if len(serialsOf[l.id]) > 0 {
+				return Invalid("%s no es serializado; no lleva IMEI.", l.productName)
 			}
 			receivedAny = true
 			if _, err := tx.Exec(`INSERT INTO goods_receipt_lines

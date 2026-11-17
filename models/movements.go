@@ -36,6 +36,9 @@ type MovementRequest struct {
 	Type      string  `json:"type"`
 	Quantity  int     `json:"quantity"`
 	Reason    *string `json:"reason"`
+	// Serials — IMEI de las piezas que entran o salen; obligatorio en productos
+	// serializados, uno por pieza (KAN-137).
+	Serials []string `json:"serials"`
 }
 
 // canonicalMovementType acepta "Entry"/"entry"/0, etc.
@@ -125,19 +128,26 @@ func CreateMovement(orgID string, r MovementRequest) (*Movement, error) {
 	err := withTx(func(tx *sql.Tx) error {
 		var stock int
 		var serialized bool
+		var name string
 		// Un producto eliminado ya no recibe movimientos (KAN-94).
-		err := tx.QueryRow(`SELECT in_stock, is_serialized FROM products WHERE organization_id = ? AND id = ? AND deleted_at IS NULL FOR UPDATE`, orgID, r.ProductID).Scan(&stock, &serialized)
+		err := tx.QueryRow(`SELECT in_stock, is_serialized, name FROM products WHERE organization_id = ? AND id = ? AND deleted_at IS NULL FOR UPDATE`, orgID, r.ProductID).Scan(&stock, &serialized, &name)
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrNotFound
 		}
 		if err != nil {
 			return err
 		}
-		// Un movimiento cambiaría el stock sin tocar sus IMEI: el stock de un
-		// producto serializado siempre es igual a su número de IMEI (KAN-144).
-		// Mientras los movimientos no capturen IMEI (KAN-137) se rechazan.
+		// El stock de un producto serializado siempre es igual a su número de
+		// IMEI disponibles (KAN-144): entradas y salidas llevan sus IMEI (KAN-137).
 		if serialized {
-			return Invalid("Los productos serializados se ajustan editando sus números de serie (IMEI).")
+			if t == MovementAdjustment {
+				return Invalid("Los ajustes no aplican a productos serializados; registra una entrada o salida con sus IMEI.")
+			}
+			if err := applySerialMovement(tx, orgID, r, t, name); err != nil {
+				return err
+			}
+		} else if len(r.Serials) > 0 {
+			return Invalid("El producto no es serializado; no lleva IMEI.")
 		}
 		delta := r.Quantity
 		if t == MovementExit {
@@ -163,4 +173,38 @@ func CreateMovement(orgID string, r MovementRequest) (*Movement, error) {
 		return nil, err
 	}
 	return GetMovement(orgID, id)
+}
+
+// applySerialMovement da de alta (entrada) o baja (salida) los IMEI de un
+// movimiento. La baja marca la serie como 'Baja' y le pone deleted_at, igual
+// que al borrar un producto, para liberar el IMEI. Exige un IMEI por pieza.
+func applySerialMovement(tx *sql.Tx, orgID string, r MovementRequest, t, name string) error {
+	serials, err := serialsForQuantity(r.Serials, r.Quantity, name)
+	if err != nil {
+		return err
+	}
+	if t == MovementEntry {
+		return insertSerials(tx, orgID, r.ProductID, serials)
+	}
+	for _, imei := range serials {
+		var serialID, productID, status string
+		err := tx.QueryRow(`SELECT id, product_id, status FROM product_serials
+			WHERE organization_id = ? AND imei = ? AND deleted_at IS NULL FOR UPDATE`, orgID, imei).Scan(&serialID, &productID, &status)
+		if errors.Is(err, sql.ErrNoRows) {
+			return Invalid("El IMEI / serie %s no está registrado.", imei)
+		}
+		if err != nil {
+			return err
+		}
+		if productID != r.ProductID {
+			return Invalid("El IMEI / serie %s pertenece a otro producto.", imei)
+		}
+		if status != "Disponible" {
+			return Invalid("El IMEI / serie %s no está disponible (estado %s).", imei, status)
+		}
+		if _, err := tx.Exec(`UPDATE product_serials SET status = 'Baja', deleted_at = UTC_TIMESTAMP() WHERE id = ?`, serialID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

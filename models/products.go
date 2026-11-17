@@ -253,7 +253,7 @@ func fillProductDetails(list []*Product) error {
 	}
 	rows.Close()
 
-	rows, err = db.DB.Query(`SELECT product_id, imei FROM product_serials WHERE product_id IN (`+in+`) AND deleted_at IS NULL ORDER BY imei`, anySlice(ids)...)
+	rows, err = db.DB.Query(`SELECT product_id, imei FROM product_serials WHERE product_id IN (`+in+`) AND deleted_at IS NULL AND status = 'Disponible' ORDER BY imei`, anySlice(ids)...)
 	if err != nil {
 		return err
 	}
@@ -320,14 +320,15 @@ func GetProduct(orgID, id string) (*Product, error) {
 	return p, fillProductDetails([]*Product{p})
 }
 
-// cleanSerials quita vacíos y valida que no se repitan.
+// cleanSerials quita espacios, rechaza IMEI vacíos y valida que no se repitan.
+// No impone formato (largo o dígitos): cada marca maneja series distintas.
 func cleanSerials(in []string) ([]string, error) {
 	seen := map[string]bool{}
 	out := []string{}
 	for _, s := range in {
 		s = strings.TrimSpace(s)
 		if s == "" {
-			continue
+			return nil, Invalid("Hay un IMEI / serie vacío; captura todos o quita el campo.")
 		}
 		if seen[strings.ToLower(s)] {
 			return nil, Invalid("El IMEI / serie %s está repetido.", s)
@@ -336,6 +337,33 @@ func cleanSerials(in []string) ([]string, error) {
 		out = append(out, s)
 	}
 	return out, nil
+}
+
+// insertSerials da de alta series como 'Disponible'. Si el IMEI ya está
+// registrado (vivo) en la organización responde 409.
+func insertSerials(tx *sql.Tx, orgID, productID string, serials []string) error {
+	for _, s := range serials {
+		if _, err := tx.Exec(`INSERT INTO product_serials (organization_id, product_id, imei, status) VALUES (?,?,?,'Disponible')`,
+			orgID, productID, s); err != nil {
+			if IsUniqueViolation(err) {
+				return Conflict("El IMEI / serie %s ya está registrado en otro producto.", s)
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+// serialsForQuantity limpia los IMEI de una entrada y exige uno por pieza.
+func serialsForQuantity(in []string, qty int, productName string) ([]string, error) {
+	serials, err := cleanSerials(in)
+	if err != nil {
+		return nil, err
+	}
+	if len(serials) != qty {
+		return nil, Invalid("%s es serializado: captura los %d IMEI / series (llevas %d).", productName, qty, len(serials))
+	}
+	return serials, nil
 }
 
 // makeUPC — '4' + (1 si es serializado, 0 si no) + el id con 10 dígitos.
