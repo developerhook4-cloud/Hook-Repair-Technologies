@@ -51,8 +51,10 @@
           ${ui.modalHeader(editing ? 'Editar proveedor' : 'Nuevo proveedor')}
           <div class="form-stack form-stack--roomy" data-form>
             ${ui.field({ label: 'Nombre', name: 'name', value: s.name, placeholder: 'Ej. Tech Source', required: true })}
-            ${ui.field({ label: 'Teléfono', name: 'phone1', value: s.phone1, placeholder: '662 481 9204', required: true, phone: true })}
-            ${ui.field({ label: 'Teléfono Alternativo', name: 'phone2', value: s.phone2, placeholder: '662 739 1058', phone: true })}
+            <div class="field">
+              <label class="label-normal field__label">Teléfonos <span class="req">*</span></label>
+              <div data-phones></div>
+            </div>
             ${ui.field({ label: 'Email', name: 'email', type: 'email', value: s.email, placeholder: 'ejemplo@proveedor.com', required: true })}
             ${editing ? ui.ddField({ label: 'Estado', id: 'ddStatus' }) : ''}
           </div>
@@ -76,22 +78,27 @@
       });
     }
     ui.phoneInputs(form);
+    const phoneList = ui.phoneList(m.el.querySelector('[data-phones]'), ui.phonesOf(s), { required: true });
+    let formOk = false;
     const v = ui.validator(
       form,
       {
         name: [ui.rules.required],
-        phone1: [ui.rules.required, ui.rules.phone],
-        phone2: [ui.rules.phone],
         email: [ui.rules.required, [(x) => emailRe.test(x), 'El formato debe ser válido.']],
       },
-      (ok) => (save.disabled = !ok)
+      (ok) => {
+        formOk = ok;
+        save.disabled = !ok || !!phoneList.error();
+      }
     );
     v.validate();
+    // Cambios en la lista de teléfonos (el validador solo conoce los campos con nombre).
+    form.addEventListener('input', () => (save.disabled = !formOk || !!phoneList.error()));
 
     save.addEventListener('click', () =>
       ui.busy(save, async () => {
         const f = ui.formValues(form);
-        const payload = { name: f.name.trim(), phone1: f.phone1.trim(), phone2: f.phone2.trim() || null, email: f.email.trim() };
+        const payload = { name: f.name.trim(), phones: phoneList.get(), email: f.email.trim() };
         try {
           if (editing) {
             await Hook.put(`${endpoint}/${supplier.id}`, payload);

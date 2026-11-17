@@ -18,17 +18,22 @@
   document.addEventListener('hook:sidebar', (e) => applyLayout(e.detail.collapsed));
   applyLayout(document.documentElement.classList.contains('sidebar-shrink'));
 
+  let formOk = false;
   const v = ui.validator(
     form,
     {
       name: [ui.rules.required, ui.rules.pattern(nameRe)],
       email: [ui.rules.required, ui.rules.email],
-      phone1: [ui.rules.phone],
-      phone2: [ui.rules.phone],
       postCode: [ui.rules.pattern(/^[0-9]+$/)],
     },
-    (valid) => (submit.disabled = !valid)
+    (valid) => {
+      formOk = valid;
+      submit.disabled = !valid || !!(phoneList && phoneList.error());
+    }
   );
+  // Teléfonos múltiples (KAN-101): la lista se dibuja al cargar la organización.
+  let phoneList = null;
+  form.addEventListener('input', () => (submit.disabled = !formOk || !!(phoneList && phoneList.error())));
 
   ui.phoneInputs(form);
 
@@ -45,8 +50,8 @@
       const set = (n, val) => (form.elements[n].value = val || '');
       set('name', o.name);
       set('email', o.email);
-      set('phone1', o.phone1);
-      set('phone2', o.phone2);
+      phoneList = ui.phoneList(document.getElementById('orgPhones'), ui.phonesOf(o));
+      if (!canEdit) document.querySelectorAll('#orgPhones input, #orgPhones select, #orgPhones button').forEach((el) => (el.disabled = true));
       set('website', o.website);
       set('address', a.address);
       set('city', a.city);
@@ -62,15 +67,14 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!canEdit) return;
-    if (!v.validate(true)) return;
+    if (!v.validate(true) || (phoneList && phoneList.error())) return;
     const f = v.values();
     await ui.busy(submit, async () => {
       try {
         await Hook.put('/api/organizations/mine', {
           name: f.name.trim(),
           email: f.email.trim(),
-          phone1: f.phone1.trim(),
-          phone2: f.phone2.trim(),
+          phones: phoneList ? phoneList.get() : [],
           website: f.website.trim(),
           address: { address: f.address.trim(), city: f.city.trim(), state: f.state.trim(), postCode: f.postCode.trim(), country: f.country.trim() },
         });
