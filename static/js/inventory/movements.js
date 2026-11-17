@@ -56,7 +56,7 @@
   }
 
   function openCreate() {
-    const cur = { productId: null, type: null };
+    const cur = { productId: null, type: null, serials: [], picked: new Set() };
     const m = ui.modal(`
       <div class="modal-card modal-card--lg modal-card--visible">
         <div class="modal-body">
@@ -70,6 +70,7 @@
                      class="input input--strong" />
               <span data-hint class="label-small field__hint"></span>
             </div>
+            <div class="field field--span" data-serial-box hidden></div>
             <div class="field">
               <label class="label-normal field__label">Stock</label>
               <div data-preview class="body-normal stock-preview">—</div>
@@ -92,11 +93,65 @@
     const hint = form.querySelector('[data-hint]');
     const preview = form.querySelector('[data-preview]');
 
-    function sync() {
-      const q = parseInt(qty.value, 10);
+    const serialBox = form.querySelector('[data-serial-box]');
+    // Producto serializado: la entrada captura un IMEI por pieza; la salida elige IMEI disponibles (KAN-137).
+    function paintSerials() {
       const product = products.find((p) => p.id === cur.productId);
+      const q = parseInt(qty.value, 10);
+      serialBox.hidden = !(product && product.isSerialized && (cur.type === 'Entry' || cur.type === 'Exit'));
+      if (serialBox.hidden) return;
+      if (cur.type === 'Entry') {
+        const n = !isNaN(q) && q > 0 ? Math.min(q, 200) : 0;
+        cur.serials.length = n;
+        for (let i = 0; i < n; i++) if (cur.serials[i] === undefined) cur.serials[i] = '';
+        serialBox.innerHTML = `<div class="serial-box">
+          <p class="label-small serial-box__title">${n ? `Ingresa los ${n} IMEI / Series de las piezas que entran:` : 'Escribe la cantidad para capturar los IMEI.'}</p>
+          <div class="serial-box__grid serial-box__grid--inputs">
+            ${cur.serials.map((s, i) => `<div class="serial-box__unit">
+              <label class="label-small detail-label">Unidad ${i + 1}</label>
+              <input type="text" data-serial="${i}" value="${esc(s)}" maxlength="100" placeholder="IMEI o Serie" class="body-small serial-box__input" />
+            </div>`).join('')}
+          </div>
+        </div>`;
+      } else {
+        const list = product.serialNumbers || [];
+        serialBox.innerHTML = `<div class="serial-box">
+          <p class="label-small serial-box__title">${list.length ? 'Elige los IMEI / Series que salen (la cantidad es lo que elijas):' : 'Este producto no tiene IMEI disponibles.'}</p>
+          <div class="serial-box__grid">
+            ${list.map((s) => `<label class="check"><input type="checkbox" data-pick value="${esc(s)}" ${cur.picked.has(s) ? 'checked' : ''} /> <span>${esc(s)}</span></label>`).join('')}
+          </div>
+        </div>`;
+      }
+    }
+    serialBox.addEventListener('input', (e) => {
+      if (e.target.dataset.serial !== undefined) cur.serials[Number(e.target.dataset.serial)] = e.target.value;
+      sync(false);
+    });
+    serialBox.addEventListener('change', (e) => {
+      if (e.target.dataset.pick === undefined) return;
+      if (e.target.checked) cur.picked.add(e.target.value);
+      else cur.picked.delete(e.target.value);
+      if (cur.type === 'Exit') qty.value = cur.picked.size || '';
+      sync(false);
+    });
+
+    function sync(repaint = true) {
+      const product = products.find((p) => p.id === cur.productId);
+      const serialized = !!(product && product.isSerialized);
+      qty.readOnly = serialized && cur.type === 'Exit';
+      if (repaint) paintSerials();
+      const q = parseInt(qty.value, 10);
       hint.textContent = cur.type === 'Adjustment' ? 'En ajustes usa negativo para restar (ej. -2).' : cur.type ? 'Debe ser mayor a cero.' : '';
       let ok = !!product && !!cur.type && !isNaN(q) && (cur.type === 'Adjustment' ? q !== 0 : q > 0);
+      if (serialized && cur.type === 'Adjustment') {
+        ok = false;
+        hint.textContent = 'Los productos serializados no admiten ajustes: usa entrada o salida con IMEI.';
+      } else if (serialized && cur.type === 'Entry') {
+        const vals = cur.serials.map((v) => v.trim().toLowerCase());
+        if (vals.some((v) => !v) || new Set(vals).size !== vals.length) ok = false;
+      } else if (serialized && cur.type === 'Exit') {
+        if (cur.picked.size === 0) ok = false;
+      }
       if (product) {
         const delta = isNaN(q) ? 0 : cur.type === 'Exit' ? -q : q;
         const next = product.inStock + (cur.type ? delta : 0);
@@ -109,9 +164,9 @@
     }
 
     ui.dropdown(m.el.querySelector('#ddProduct'), {
-      items: products.map((p) => ({ value: p.id, label: `${p.name} (${p.inStock})` })),
+      items: products.map((p) => ({ value: p.id, label: `${p.name} (${p.inStock})${p.isSerialized ? ' · Serializado (IMEI)' : ''}` })),
       placeholder: products.length ? 'Seleccionar producto' : 'No hay productos',
-      onChange: (v) => ((cur.productId = v), sync()),
+      onChange: (v) => ((cur.productId = v), (cur.serials = []), cur.picked.clear(), sync()),
     });
     if (!products.length) {
       form.insertAdjacentHTML(
@@ -122,8 +177,16 @@
          </div>`
       );
     }
-    ui.dropdown(m.el.querySelector('#ddType'), { items: TYPES, onChange: (v) => ((cur.type = v), sync()) });
+    ui.dropdown(m.el.querySelector('#ddType'), { items: TYPES, onChange: (v) => ((cur.type = v), (cur.serials = []), cur.picked.clear(), sync()) });
     qty.addEventListener('input', sync);
+
+    function serialsToSend() {
+      const product = products.find((p) => p.id === cur.productId);
+      if (!product || !product.isSerialized) return undefined;
+      if (cur.type === 'Entry') return cur.serials.map((v) => v.trim());
+      if (cur.type === 'Exit') return [...cur.picked];
+      return undefined;
+    }
 
     save.addEventListener('click', () =>
       ui.busy(save, async () => {
@@ -132,6 +195,7 @@
             productId: cur.productId,
             type: cur.type,
             quantity: parseInt(qty.value, 10),
+            serials: serialsToSend(),
             reason: form.querySelector('[name=reason]').value.trim() || null,
           });
           m.close();
