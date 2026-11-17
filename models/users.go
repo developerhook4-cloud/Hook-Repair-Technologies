@@ -1,6 +1,7 @@
 package models
 
 import (
+	"crypto/rand"
 	"database/sql"
 	"errors"
 	"log"
@@ -10,6 +11,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"hook-repair/db"
+	"hook-repair/env"
 )
 
 // bcryptCost — factor de trabajo de bcrypt.
@@ -118,7 +120,7 @@ func emailTaken(email, exceptID string) (bool, error) {
 
 // CreateUser crea un usuario en la organización. Si no trae rol, usa
 // "Administrador" de esa organización.
-func CreateUser(orgID string, r SaveUserRequest) (*User, error) {
+func CreateUser(actor *SessionUser, orgID string, r SaveUserRequest) (*User, error) {
 	if err := r.normalize(true); err != nil {
 		return nil, err
 	}
@@ -132,6 +134,11 @@ func CreateUser(orgID string, r SaveUserRequest) (*User, error) {
 		return nil, Invalid("El rol no es válido.")
 	} else if _, err := GetRole(orgID, r.RoleID); err != nil {
 		return nil, Invalid("El rol no pertenece a esta organización.")
+	}
+	if role, err := GetRole(orgID, r.RoleID); err != nil {
+		return nil, err
+	} else if err := ensureCanTouchRole(actor, orgID, role); err != nil {
+		return nil, err
 	}
 	if taken, err := emailTaken(r.Email, ""); err != nil {
 		return nil, err
@@ -158,12 +165,15 @@ func CreateUser(orgID string, r SaveUserRequest) (*User, error) {
 }
 
 // UpdateUser edita nombre, email, rol y (si viene) contraseña.
-func UpdateUser(orgID, userID string, r SaveUserRequest) (*User, error) {
+func UpdateUser(actor *SessionUser, orgID, userID string, r SaveUserRequest) (*User, error) {
 	if err := r.normalize(false); err != nil {
 		return nil, err
 	}
 	current, err := GetUser(orgID, userID)
 	if err != nil {
+		return nil, err
+	}
+	if err := ensureCanTouchUser(actor, orgID, current); err != nil {
 		return nil, err
 	}
 	roleID := current.RoleID
@@ -179,6 +189,9 @@ func UpdateUser(orgID, userID string, r SaveUserRequest) (*User, error) {
 	if roleID != current.RoleID {
 		role, err := GetRole(orgID, roleID)
 		if err != nil {
+			return nil, err
+		}
+		if err := ensureCanTouchRole(actor, orgID, role); err != nil {
 			return nil, err
 		}
 		if !IsAdminRole(role.Permissions) {
@@ -213,7 +226,14 @@ func UpdateUser(orgID, userID string, r SaveUserRequest) (*User, error) {
 }
 
 // SetUserStatus activa o desactiva un usuario.
-func SetUserStatus(orgID, userID string, active bool) error {
+func SetUserStatus(actor *SessionUser, orgID, userID string, active bool) error {
+	u, err := GetUser(orgID, userID)
+	if err != nil {
+		return err
+	}
+	if err := ensureCanTouchUser(actor, orgID, u); err != nil {
+		return err
+	}
 	if !active {
 		if err := ensureAdminRemains(orgID, userID, ""); err != nil {
 			return err
@@ -291,11 +311,37 @@ type SessionUser struct {
 	Role           string   `json:"role"`
 	Permissions    []string `json:"permissions"`
 	OrganizationID string   `json:"organizationId"`
+	IsPlatform     bool     `json:"isPlatform"` // su organización es la de plataforma (administra a todas)
 }
 
-// Can dice si el usuario tiene un permiso.
+// Can dice si el usuario tiene un permiso. Los permisos Organizations.* solo
+// valen en la organización de plataforma: un rol viejo de un taller que los
+// tenga queda inerte.
 func (u *SessionUser) Can(permission string) bool {
-	return u != nil && HasPermission(u.Permissions, permission)
+	if u == nil {
+		return false
+	}
+	if IsPlatformPermission(permission) && !u.IsPlatform {
+		return false
+	}
+	return HasPermission(u.Permissions, permission)
+}
+
+// IsAdmin dice si el usuario es administrador de su organización (mismo
+// criterio que ensureAdminRemains: puede editar usuarios y roles).
+func (u *SessionUser) IsAdmin() bool {
+	return u != nil && u.Can(UpdateUsers) && u.Can(UpdateRoles)
+}
+
+// CanAll dice si el usuario tiene TODOS los permisos de la lista (regla de
+// escalada: solo se puede otorgar o tocar lo que uno mismo tiene).
+func (u *SessionUser) CanAll(perms []string) bool {
+	for _, p := range perms {
+		if !u.Can(p) {
+			return false
+		}
+	}
+	return true
 }
 
 // loadSessionUser trae al usuario solo si él, su rol y su organización están activos.
@@ -306,12 +352,12 @@ func loadSessionUser(where string, arg any) (*SessionUser, string, error) {
 	var userActive, roleActive, orgActive bool
 	err := db.DB.QueryRow(`
 		SELECT u.id, u.name, u.email, u.role_id, r.name, r.permissions,
-		       u.organization_id, u.password_hash, u.active, r.active, o.active
+		       u.organization_id, u.password_hash, u.active, r.active, o.active, o.is_platform
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		JOIN organizations o ON o.id = u.organization_id
 		WHERE u.deleted_at IS NULL AND `+where, arg).
-		Scan(&u.ID, &u.Name, &u.Email, &u.RoleID, &u.Role, &perms, &u.OrganizationID, &hash, &userActive, &roleActive, &orgActive)
+		Scan(&u.ID, &u.Name, &u.Email, &u.RoleID, &u.Role, &perms, &u.OrganizationID, &hash, &userActive, &roleActive, &orgActive, &u.IsPlatform)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, "", ErrNotFound
 	}
@@ -350,9 +396,12 @@ func Authenticate(email, password string) (*SessionUser, error) {
 	return u, nil
 }
 
-// SeedRootAdmin crea la organización raíz y su super administrador si todavía
-// no existen. La contraseña inicial se puede cambiar
-// con SEED_ADMIN_PASSWORD antes del primer arranque.
+// SeedRootAdmin crea la organización raíz (la de plataforma, is_platform = 1) y
+// su super administrador si todavía no existen; si ya existe no toca nada.
+// La contraseña inicial sale de SEED_ADMIN_PASSWORD (8–72 caracteres, con al
+// menos una letra y un número; si no cumple, la app no arranca). Si falta:
+// en producción la app no arranca; fuera de producción se genera una
+// contraseña aleatoria que se escribe UNA sola vez en el log.
 func SeedRootAdmin() {
 	const email = "admin@hookrepair.com"
 	var exists bool
@@ -364,8 +413,20 @@ func SeedRootAdmin() {
 		return
 	}
 	password := os.Getenv("SEED_ADMIN_PASSWORD")
-	if password == "" {
-		password = "AdminPassword123"
+	generated := false
+	switch {
+	case password == "" && env.IsProduction():
+		log.Fatal("SEED_ADMIN_PASSWORD es obligatorio en producción para crear el super administrador inicial (8 a 72 caracteres, con al menos una letra y un número).")
+	case password == "":
+		var err error
+		if password, err = randomPassword(); err != nil {
+			log.Fatalf("Seed: no se pudo generar la contraseña inicial: %v", err)
+		}
+		generated = true
+	default:
+		if err := ValidatePassword(password); err != nil {
+			log.Fatalf("SEED_ADMIN_PASSWORD no es válida: %v", err)
+		}
 	}
 	hash, err := HashPassword(password)
 	if err != nil {
@@ -373,7 +434,7 @@ func SeedRootAdmin() {
 		return
 	}
 	err = withTx(func(tx *sql.Tx) error {
-		orgID, err := insert(tx, `INSERT INTO organizations (name, email, active) VALUES ('Hook Technologies', ?, 1)`, email)
+		orgID, err := insert(tx, `INSERT INTO organizations (name, email, active, is_platform) VALUES ('Hook Technologies', ?, 1, 1)`, email)
 		if err != nil {
 			return err
 		}
@@ -390,5 +451,28 @@ func SeedRootAdmin() {
 		log.Printf("Seed: no se pudo crear el admin: %v", err)
 		return
 	}
+	if generated {
+		log.Printf("Seed: se creó %s con la contraseña generada %s — anótala ahora, no se vuelve a mostrar (cámbiala desde Perfil).", email, password)
+		return
+	}
 	log.Printf("Seed: se creó %s (cambia la contraseña desde Perfil).", email)
+}
+
+// randomPassword genera una contraseña de 20 caracteres que cumple la política
+// de ValidatePassword (letras y números, sin símbolos para que sea fácil de copiar).
+func randomPassword() (string, error) {
+	const alphabet = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	buf := make([]byte, 20)
+	for {
+		raw := make([]byte, len(buf))
+		if _, err := rand.Read(raw); err != nil {
+			return "", err
+		}
+		for i, b := range raw {
+			buf[i] = alphabet[int(b)%len(alphabet)]
+		}
+		if ValidatePassword(string(buf)) == nil {
+			return string(buf), nil
+		}
+	}
 }

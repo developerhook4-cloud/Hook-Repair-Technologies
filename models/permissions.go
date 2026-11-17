@@ -145,3 +145,23 @@ var DefaultRoles = []defaultRole{
 		ViewCustomers, UpdateCustomers,
 	}},
 }
+
+// platformModule — prefijo de los permisos de administración de plataforma.
+const platformModule = "Organizations."
+
+// IsPlatformPermission dice si el permiso es de Organizations.* (solo la
+// organización de plataforma puede tener o dar estos permisos).
+func IsPlatformPermission(p string) bool {
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(p)), strings.ToLower(platformModule))
+}
+
+// WithoutPlatformPermissions devuelve la lista sin los permisos Organizations.*.
+func WithoutPlatformPermissions(perms []string) []string {
+	out := make([]string, 0, len(perms))
+	for _, p := range perms {
+		if !IsPlatformPermission(p) {
+			out = append(out, p)
+		}
+	}
+	return out
+}

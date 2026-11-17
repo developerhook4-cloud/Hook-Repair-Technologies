@@ -1,11 +1,15 @@
 package auth
 
 import (
+	"crypto/rand"
+	"log"
 	"net/http"
 	"os"
 	"strings"
 
 	"github.com/gorilla/sessions"
+
+	"hook-repair/env"
 )
 
 // Store es el almacén de sesiones basado en cookies firmadas (mismo esquema
@@ -15,18 +19,36 @@ var Store *sessions.CookieStore
 // SessionName es el nombre de la cookie de sesión.
 const SessionName = "hook_session"
 
+// minSecretLen — largo mínimo (en bytes) de SESSION_SECRET.
+const minSecretLen = 32
+
+// sessionMaxAge — duración de la sesión: 7 días (lo mismo que duraba el refresh token).
+const sessionMaxAge = 86400 * 7
+
 // InitStore prepara el store de sesiones. La clave de firma sale de
-// SESSION_SECRET — en producción SIEMPRE debe venir del entorno.
+// SESSION_SECRET (mínimo 32 bytes). En producción es OBLIGATORIA: si falta o es
+// corta la app no arranca. Fuera de producción, si falta, se genera una clave
+// aleatoria (las sesiones se pierden al reiniciar). Nunca hay una clave fija.
 func InitStore() {
 	secret := os.Getenv("SESSION_SECRET")
-	if secret == "" {
-		secret = "cambia-esto-por-una-clave-larga-y-aleatoria-en-produccion"
+	if len(secret) < minSecretLen {
+		if env.IsProduction() {
+			log.Fatal("SESSION_SECRET es obligatorio en producción y debe medir al menos 32 caracteres. Genera uno con: openssl rand -base64 48")
+		}
+		key := make([]byte, 48)
+		if _, err := rand.Read(key); err != nil {
+			log.Fatalf("No se pudo generar una clave de sesión aleatoria: %v", err)
+		}
+		secret = string(key)
+		log.Println("ADVERTENCIA: SESSION_SECRET falta o mide menos de 32 caracteres; se usa una clave aleatoria temporal (las sesiones se pierden al reiniciar). Define SESSION_SECRET antes de desplegar.")
 	}
 
 	Store = sessions.NewCookieStore([]byte(secret))
+	// El codec de securecookie también caduca a 7 días (por defecto aceptaba 30).
+	Store.MaxAge(sessionMaxAge)
 	Store.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 7, // 7 días (lo mismo que duraba el refresh token)
+		MaxAge:   sessionMaxAge,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Secure:   strings.EqualFold(os.Getenv("COOKIE_SECURE"), "true"),

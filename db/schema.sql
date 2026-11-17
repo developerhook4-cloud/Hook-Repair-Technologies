@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS organizations (
   post_code  VARCHAR(20)  NOT NULL DEFAULT '',
   country    VARCHAR(100) NOT NULL DEFAULT '',
   active     TINYINT(1)   NOT NULL DEFAULT 1,
+  -- is_platform: 1 = organización de plataforma (la de Hook): solo sus usuarios
+  -- pueden usar los permisos Organizations.* y /api/organizations.
+  is_platform TINYINT(1)  NOT NULL DEFAULT 0,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

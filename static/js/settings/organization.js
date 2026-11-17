@@ -7,6 +7,9 @@
   const form = document.getElementById('orgForm');
   const submit = document.getElementById('orgSubmit');
   const nameRe = /^[a-zA-Z0-9\s.,&\-ñÑáéíóúÁÉÍÓÚüÜ]+$/;
+  // Solo los administradores (Users.Update + Roles.Update, igual que el servidor)
+  // pueden guardar; los demás ven los datos en solo lectura.
+  const canEdit = Hook.can('Users.Update') && Hook.can('Roles.Update');
 
   // Con el menú lateral colapsado, las dos secciones van lado a lado
   function applyLayout(collapsed) {
@@ -28,6 +31,12 @@
   );
 
   ui.phoneInputs(form);
+
+  if (!canEdit) {
+    form.querySelectorAll('input, select, textarea').forEach((el) => (el.disabled = true));
+    const actions = form.querySelector('.form-actions');
+    if (actions) actions.hidden = true;
+  }
 
   async function load() {
     try {
@@ -52,6 +61,7 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!canEdit) return;
     if (!v.validate(true)) return;
     const f = v.values();
     await ui.busy(submit, async () => {

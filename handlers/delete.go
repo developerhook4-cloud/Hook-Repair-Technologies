@@ -41,7 +41,7 @@ func DeleteRole(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := models.DeleteRole(orgOf(c), id); err != nil {
+	if err := models.DeleteRole(currentUser(c), orgOf(c), id); err != nil {
 		respondError(c, err, "role")
 		return
 	}
@@ -58,7 +58,7 @@ func DeleteUser(c *gin.Context) {
 		problem(c, http.StatusBadRequest, "Invalid user", "No puedes eliminar tu propio usuario.")
 		return
 	}
-	if err := models.DeleteUser(orgOf(c), id); err != nil {
+	if err := models.DeleteUser(currentUser(c), orgOf(c), id); err != nil {
 		respondError(c, err, "user")
 		return
 	}
@@ -79,7 +79,7 @@ func DeleteOrganizationUser(c *gin.Context) {
 		problem(c, http.StatusBadRequest, "Invalid user", "No puedes eliminar tu propio usuario.")
 		return
 	}
-	if err := models.DeleteUser(id, userID); err != nil {
+	if err := models.DeleteUser(currentUser(c), id, userID); err != nil {
 		respondError(c, err, "user")
 		return
 	}
