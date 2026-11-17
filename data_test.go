@@ -136,7 +136,7 @@ func TestValidaciones_OrganizacionLargosYTelefono(t *testing.T) {
 		}
 		return b
 	}
-	for field, max := range map[string]int{"address": 300, "city": 100, "state": 100, "postCode": 20, "country": 100} {
+	for field, max := range map[string]int{"address": 300, "neighborhood": 200, "city": 100, "state": 100, "postCode": 20, "country": 100} {
 		r := a.do(plat, "POST", "/api/organizations", base(map[string]any{"address": map[string]any{field: strings.Repeat("x", max+1)}}))
 		expect(t, "organización con "+field+" demasiado largo", r, http.StatusBadRequest)
 	}
@@ -145,7 +145,7 @@ func TestValidaciones_OrganizacionLargosYTelefono(t *testing.T) {
 	// Los máximos exactos sí caben.
 	expect(t, "organización con largos máximos", a.do(plat, "POST", "/api/organizations", base(map[string]any{
 		"email":   "max" + u + "@ejemplo.com",
-		"address": map[string]any{"address": strings.Repeat("a", 300), "city": strings.Repeat("c", 100), "state": strings.Repeat("s", 100), "postCode": strings.Repeat("9", 20), "country": strings.Repeat("p", 100)},
+		"address": map[string]any{"address": strings.Repeat("a", 300), "neighborhood": strings.Repeat("n", 200), "city": strings.Repeat("c", 100), "state": strings.Repeat("s", 100), "postCode": strings.Repeat("9", 20), "country": strings.Repeat("p", 100)},
 	})), http.StatusCreated)
 
 	// Teléfono con separadores: se guarda solo con dígitos.

@@ -75,6 +75,12 @@ func main() {
 	models.SeedRootAdmin()
 	models.EnsureDefaultRoles()
 
+	// Catálogo SEPOMEX (KAN-102): si existe el archivo local (SEPOMEX_FILE)
+	// se carga en segundo plano (tarda unos segundos) para no retrasar el
+	// arranque ni el healthcheck; mientras la tabla esté vacía
+	// GET /api/postal-codes/:cp responde 503.
+	go db.EnsurePostalCatalog()
+
 	auth.InitStore()
 
 	router := setupRouter()
@@ -169,6 +175,9 @@ func setupRouter() *gin.Engine {
 	authAPI.POST("/refresh-token", h.Me) // compatibilidad con el frontend anterior
 
 	api := router.Group("/api", h.RequireAPIAuth())
+
+	// Catálogo de códigos postales (KAN-102): global, solo pide sesión.
+	api.GET("/postal-codes/:cp", h.GetPostalCode)
 
 	// Perfil del usuario con sesión.
 	api.PUT("/users/me", h.UpdateProfile)

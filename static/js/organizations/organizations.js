@@ -127,6 +127,7 @@
           <div class="org-detail__line org-detail__line--top">${ui.icon('location-dot', 'org-detail__icon')}
             <div>
               <p>${esc(a.address || 'No registrado')}</p>
+              ${a.neighborhood ? `<p>Col. ${esc(a.neighborhood)}</p>` : ''}
               <p>${esc(a.city || 'No registrada')}, ${esc(a.state || 'No registrado')}</p>
               <p>C.P. ${esc(a.postCode || 'No registrado')}</p>
               <p>${esc(a.country || '')}</p>
@@ -205,9 +206,10 @@
          </div></section>
          <div class="org-modal__divider"></div>
          <section><h4 class="heading-6 org-modal__section-title">Ubicación</h4><div class="form-grid form-grid--sm">
-           <div class="span-all">${input('Dirección', 'address', a.address, 'text', 'placeholder="Calle, número y colonia"')}</div>
+           <div class="span-all">${input('Dirección', 'address', a.address, 'text', 'placeholder="Calle y número"')}</div>
+           ${input('Código Postal', 'postCode', a.postCode, 'text', 'inputmode="numeric" maxlength="10"')}${input('Colonia', 'neighborhood', a.neighborhood)}
            ${input('Ciudad', 'city', a.city)}${input('Estado', 'state', a.state)}
-           ${input('Código Postal', 'postCode', a.postCode, 'text', 'inputmode="numeric" maxlength="10"')}${input('País', 'country', a.country || (editing ? '' : 'México'))}
+           ${input('País', 'country', a.country || (editing ? '' : 'México'))}
          </div></section>
          ${buttons('Guardar Organización')}
        </form>`
@@ -215,6 +217,7 @@
     const form = m.el.querySelector('form');
     const save = m.el.querySelector('[data-save]');
     ui.phoneInputs(form);
+    ui.addressAutofill(form);
     const v = ui.validator(
       form,
       {
@@ -240,6 +243,7 @@
           website: (f.website || '').trim(),
           address: {
             address: (f.address || '').trim(),
+            neighborhood: (f.neighborhood || '').trim(),
             city: (f.city || '').trim(),
             state: (f.state || '').trim(),
             postCode: (f.postCode || '').trim(),
