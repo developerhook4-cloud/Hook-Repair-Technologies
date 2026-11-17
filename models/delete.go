@@ -63,7 +63,8 @@ func DeleteUser(actor *SessionUser, orgID, userID string) error {
 	if err := ensureAdminRemains(orgID, userID, ""); err != nil {
 		return err
 	}
-	_, err = db.DB.Exec(`UPDATE users SET deleted_at = UTC_TIMESTAMP(), active = 0
+	// Eliminar también invalida sus sesiones (KAN-143).
+	_, err = db.DB.Exec(`UPDATE users SET deleted_at = UTC_TIMESTAMP(), active = 0, session_version = session_version + 1
 		WHERE organization_id = ? AND id = ? AND deleted_at IS NULL`, orgID, userID)
 	return err
 }
