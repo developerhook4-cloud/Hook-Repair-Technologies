@@ -63,6 +63,37 @@ func migrate() {
 			" GENERATED ALWAYS AS (IF(deleted_at IS NULL, " + l.src + ", NULL)) STORED")
 		mustExec("ALTER TABLE " + l.table + " DROP INDEX " + l.index + ", ADD UNIQUE KEY " + l.index + " (" + l.cols + ")")
 	}
+	// Teléfonos múltiples (KAN-101): la tabla phones la crea schema.sql.
+	migrateLegacyPhones()
+}
+
+// Migrate vuelve a correr los pasos de migrate (idempotentes); lo usan las pruebas.
+func Migrate() { migrate() }
+
+// migrateLegacyPhones copia phone1 / phone2 a la tabla phones (KAN-101) para las
+// organizaciones, clientes y proveedores que aún no tienen filas ahí: phone1 es
+// el principal (fijo, posición 0) y phone2 el segundo (celular; en proveedores
+// fijo). Es idempotente: NOT EXISTS evita duplicar. Los eliminados se omiten.
+func migrateLegacyPhones() {
+	for _, o := range []struct{ table, owner, orgCol, kind2, live string }{
+		{"organizations", "organization", "t.id", "celular", ""},
+		{"customers", "customer", "t.organization_id", "celular", " AND t.deleted_at IS NULL"},
+		{"suppliers", "supplier", "t.organization_id", "fijo", " AND t.deleted_at IS NULL"},
+	} {
+		missing := ` AND NOT EXISTS (SELECT 1 FROM phones p WHERE p.owner_type = '` + o.owner + `' AND p.owner_id = t.id)` + o.live
+		res, err := DB.Exec(`INSERT INTO phones (organization_id, owner_type, owner_id, kind, number, is_primary, position)
+			SELECT ` + o.orgCol + `, '` + o.owner + `', t.id, 'fijo', t.phone1, 1, 0 FROM ` + o.table + ` t
+			WHERE COALESCE(t.phone1, '') <> ''` + missing + `
+			UNION ALL
+			SELECT ` + o.orgCol + `, '` + o.owner + `', t.id, '` + o.kind2 + `', t.phone2, IF(COALESCE(t.phone1, '') = '', 1, 0), IF(COALESCE(t.phone1, '') = '', 0, 1)
+			FROM ` + o.table + ` t WHERE COALESCE(t.phone2, '') <> ''` + missing)
+		if err != nil {
+			log.Fatalf("Error copiando los teléfonos de %s: %v", o.table, err)
+		}
+		if n, _ := res.RowsAffected(); n > 0 {
+			log.Printf("Migración aplicada: %d teléfonos copiados de %s a phones", n, o.table)
+		}
+	}
 }
 
 // markPlatformOrganization marca como de plataforma la organización de
