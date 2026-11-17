@@ -693,6 +693,149 @@
     });
   };
 
+  // ── Lista de teléfonos (KAN-101) ──
+
+  const PHONE_KINDS = [
+    { value: 'fijo', label: 'Fijo' },
+    { value: 'celular', label: 'Celular' },
+    { value: 'whatsapp', label: 'WhatsApp' },
+  ];
+  const PHONE_MAX = 10;
+  ui.PHONE_KINDS = PHONE_KINDS;
+
+  /** Texto de la etiqueta de un tipo de teléfono ("celular" → "Celular"). */
+  ui.phoneKindLabel = (kind) => (PHONE_KINDS.find((k) => k.value === kind) || PHONE_KINDS[0]).label;
+
+  /** Solo dígitos (y el + inicial): igual que normalizePhone del servidor. */
+  const phoneDigits = (v) => String(v || '').trim().replace(/(?!^\+)[^0-9]/g, '');
+
+  /**
+   * Teléfonos de un cliente, proveedor u organización: si el registro no trae
+   * "phones" (respuesta antigua) se arman con phone1 / phone2.
+   */
+  ui.phonesOf = (rec) => {
+    if (rec && Array.isArray(rec.phones) && rec.phones.length) return rec.phones;
+    const out = [];
+    if (rec && (rec.phone1 || rec.phone)) out.push({ kind: 'fijo', number: rec.phone1 || rec.phone, isPrimary: true });
+    if (rec && rec.phone2) out.push({ kind: 'celular', number: rec.phone2, isPrimary: !out.length });
+    return out;
+  };
+
+  /** HTML de solo lectura con todos los teléfonos y su tipo (vistas de detalle). */
+  ui.phonesText = (rec) =>
+    ui
+      .phonesOf(rec)
+      .map((p) => `${esc(p.number)} <span class="label-small phone-list__kind">(${esc(ui.phoneKindLabel(p.kind))}${p.isPrimary ? ', principal' : ''})</span>`)
+      .join('<br>') || '—';
+
+  /**
+   * Lista editable de teléfonos: cada fila con tipo (Fijo/Celular/WhatsApp), número,
+   * botón de principal y quitar; botón "Agregar teléfono" (máx. 10).
+   *  container: elemento donde se dibuja
+   *  phones: [{ kind, number, isPrimary }] iniciales
+   *  opts.required: exige al menos un número (clientes y proveedores)
+   * Los inputs no llevan [name] para no mezclarse con ui.formValues; cualquier
+   * cambio dispara un evento "input" que sube al formulario (para revalidarlo).
+   * Devuelve { get() → arreglo para el servidor, error() → mensaje o '' }.
+   */
+  ui.phoneList = function (container, phones, opts = {}) {
+    const required = !!opts.required;
+    const uid = 'pl' + Math.random().toString(36).slice(2, 8);
+    let rows = (phones || []).map((p) => ({ kind: p.kind || 'fijo', number: p.number || '', isPrimary: !!p.isPrimary }));
+    if (!rows.length && required) rows.push({ kind: 'fijo', number: '', isPrimary: true });
+    if (rows.length && !rows.some((r) => r.isPrimary)) rows[0].isPrimary = true;
+    let touched = false;
+
+    const api = {
+      /** Teléfonos con número, listos para mandar al servidor. */
+      get() {
+        const list = rows.filter((r) => r.number.trim());
+        const primary = list.find((r) => r.isPrimary) || list[0];
+        return list.map((r) => ({ kind: r.kind, number: r.number.trim(), isPrimary: r === primary }));
+      },
+      /** Mensaje de error en español ('' si todo está bien). */
+      error() {
+        const filled = rows.filter((r) => r.number.trim());
+        if (required && !filled.length) return 'Agrega al menos un teléfono.';
+        const seen = new Set();
+        for (const r of filled) {
+          if (!ui.isPhone(r.number)) return 'Cada teléfono debe tener solo números (el + solo al inicio), máximo 15 dígitos.';
+          const d = phoneDigits(r.number);
+          if (seen.has(d)) return `El teléfono ${r.number.trim()} está repetido.`;
+          seen.add(d);
+        }
+        return '';
+      },
+    };
+
+    function draw() {
+      const err = touched ? api.error() : '';
+      container.innerHTML = `
+        <div class="phone-list">
+          ${rows
+            .map(
+              (r, i) => `
+            <div class="phone-list__row" data-row="${i}">
+              <select class="input phone-list__kind-select" data-kind aria-label="Tipo de teléfono">
+                ${PHONE_KINDS.map((k) => `<option value="${k.value}" ${k.value === r.kind ? 'selected' : ''}>${k.label}</option>`).join('')}
+              </select>
+              <input type="text" class="input phone-list__number" data-phone data-number value="${esc(r.number)}" placeholder="662 123 4567" aria-label="Número de teléfono" autocomplete="off" />
+              <label class="label-small phone-list__primary" title="Teléfono principal">
+                <input type="radio" name="${uid}" data-primary ${r.isPrimary ? 'checked' : ''} /> Principal
+              </label>
+              <button type="button" class="action-btn phone-list__remove" data-remove title="Quitar teléfono" aria-label="Quitar teléfono" ${rows.length <= (required ? 1 : 0) ? 'disabled' : ''}>${ui.icon('trash-can')}</button>
+            </div>`
+            )
+            .join('')}
+          <small class="label-small field__error" data-phone-error ${err ? '' : 'hidden'}>${esc(err)}</small>
+          <button type="button" class="quick-add phone-list__add" data-add ${rows.length >= PHONE_MAX ? 'disabled' : ''}>${ui.icon('plus')} Agregar teléfono</button>
+        </div>`;
+      ui.phoneInputs(container);
+    }
+    const changed = () => container.dispatchEvent(new Event('input', { bubbles: true }));
+    const showError = () => {
+      touched = true;
+      const el = container.querySelector('[data-phone-error]');
+      const err = api.error();
+      el.hidden = !err;
+      el.textContent = err;
+    };
+
+    // Los eventos del propio componente no deben llegar a validadores de campos
+    // con nombre, pero sí avisar al formulario de que algo cambió.
+    container.addEventListener('input', (e) => {
+      const row = e.target.closest && e.target.closest('[data-row]');
+      if (!row) return;
+      const r = rows[Number(row.dataset.row)];
+      if (e.target.matches('[data-number]')) r.number = e.target.value;
+      else if (e.target.matches('[data-kind]')) r.kind = e.target.value;
+      else if (e.target.matches('[data-primary]')) rows.forEach((x) => (x.isPrimary = x === r));
+      if (touched) showError();
+    });
+    container.addEventListener('focusout', (e) => {
+      if (e.target.matches && e.target.matches('[data-number]')) showError();
+    });
+    container.addEventListener('click', (e) => {
+      const add = e.target.closest('[data-add]');
+      const rem = e.target.closest('[data-remove]');
+      if (add && rows.length < PHONE_MAX) {
+        rows.push({ kind: 'celular', number: '', isPrimary: !rows.length });
+        draw();
+        container.querySelectorAll('[data-number]')[rows.length - 1].focus();
+        changed();
+      } else if (rem) {
+        const i = Number(rem.closest('[data-row]').dataset.row);
+        const [gone] = rows.splice(i, 1);
+        if (gone.isPrimary && rows.length) rows[0].isPrimary = true;
+        draw();
+        showError();
+        changed();
+      }
+    });
+    draw();
+    return api;
+  };
+
   ui.rules = {
     required: [(v) => !!v, 'Este campo es obligatorio.'],
     email: [(v) => !v || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v), 'El formato debe ser válido.'],

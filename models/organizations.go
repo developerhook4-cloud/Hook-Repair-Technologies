@@ -28,6 +28,7 @@ type Organization struct {
 	Phone1    string  `json:"phone1"`
 	Phone     string  `json:"phone"` // alias de phone1 (el frontend usa "phone")
 	Phone2    string  `json:"phone2"`
+	Phones    []Phone `json:"phones"` // todos los teléfonos (KAN-101); phone1/phone2 son los dos primeros
 	Address   Address `json:"address"`
 	Employees int     `json:"employees"`
 }
@@ -43,6 +44,10 @@ type SaveOrganizationRequest struct {
 	Phone2  string   `json:"phone2"`
 	Active  *bool    `json:"active"`
 	Address *Address `json:"address"`
+	// Phones — teléfonos múltiples (KAN-101). Si no viene, se usan phone1 / phone2.
+	Phones []Phone `json:"phones"`
+
+	phones []Phone // lista ya validada (la llena normalize)
 }
 
 func (r *SaveOrganizationRequest) normalize() error {
@@ -58,12 +63,12 @@ func (r *SaveOrganizationRequest) normalize() error {
 		return Invalid("El email es obligatorio y debe ser válido.")
 	}
 	var err error
-	if r.Phone1, err = normalizePhone("teléfono", r.Phone1, false); err != nil {
+	if r.phones, err = resolvePhones(r.Phones, r.Phone1, r.Phone2,
+		phoneRules{label1: "teléfono", label2: "celular", kind2: "celular"}); err != nil {
 		return err
 	}
-	if r.Phone2, err = normalizePhone("celular", r.Phone2, false); err != nil {
-		return err
-	}
+	// phone1 / phone2 se mantienen iguales a los dos primeros números.
+	r.Phone1, r.Phone2 = legacyPhones(r.phones)
 	if runeLen(r.Website) > 500 {
 		return Invalid("La página web no puede pasar de 500 caracteres.")
 	}
@@ -122,7 +127,22 @@ func GetAllOrganizations() ([]Organization, error) {
 		}
 		out = append(out, *o)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	ids := make([]string, len(out))
+	for i := range out {
+		ids[i] = out[i].ID
+	}
+	phones, err := loadPhones(ownerOrganization, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Phones = phones[out[i].ID]
+	}
+	return out, nil
 }
 
 // GetOrganization por id.
@@ -131,7 +151,15 @@ func GetOrganization(id string) (*Organization, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return o, err
+	if err != nil {
+		return nil, err
+	}
+	phones, err := loadPhones(ownerOrganization, []string{o.ID})
+	if err != nil {
+		return nil, err
+	}
+	o.Phones = phones[o.ID]
+	return o, nil
 }
 
 // CreateOrganization crea la organización y sus roles por defecto.
@@ -152,6 +180,9 @@ func CreateOrganization(r SaveOrganizationRequest) (*Organization, error) {
 			r.Name, r.Email, r.Website, active, r.Phone1, r.Phone2,
 			r.Address.Address, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country)
 		if err != nil {
+			return err
+		}
+		if err := savePhones(tx, ownerOrganization, id, id, r.phones); err != nil {
 			return err
 		}
 		return registerDefaultRoles(tx, id)
@@ -212,12 +243,17 @@ func UpdateOrganization(id string, r SaveOrganizationRequest) (*Organization, er
 	if _, err := GetOrganization(id); err != nil {
 		return nil, err
 	}
-	_, err := db.DB.Exec(`UPDATE organizations SET
+	err := withTx(func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`UPDATE organizations SET
 			name=?, email=?, website=?, phone1=?, phone2=?,
 			address=?, city=?, state=?, post_code=?, country=?
 		WHERE id=?`,
-		r.Name, r.Email, r.Website, r.Phone1, r.Phone2,
-		r.Address.Address, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country, id)
+			r.Name, r.Email, r.Website, r.Phone1, r.Phone2,
+			r.Address.Address, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country, id); err != nil {
+			return err
+		}
+		return savePhones(tx, ownerOrganization, id, id, r.phones)
+	})
 	if err != nil {
 		return nil, err
 	}
