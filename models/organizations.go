@@ -11,11 +11,13 @@ import (
 
 // Address es la dirección completa (columnas address_* en organizations y customers).
 type Address struct {
-	Address  string `json:"address"`
-	City     string `json:"city"`
-	State    string `json:"state"`
-	PostCode string `json:"postCode"`
-	Country  string `json:"country"`
+	Address string `json:"address"`
+	// Neighborhood — colonia (KAN-102).
+	Neighborhood string `json:"neighborhood"`
+	City         string `json:"city"`
+	State        string `json:"state"`
+	PostCode     string `json:"postCode"`
+	Country      string `json:"country"`
 }
 
 // Organization — fila de organizations.
@@ -77,7 +79,7 @@ func (r *SaveOrganizationRequest) normalize() error {
 		v     *string
 		max   int
 	}{
-		{"La dirección", &r.Address.Address, 300}, {"La ciudad", &r.Address.City, 100},
+		{"La dirección", &r.Address.Address, 300}, {"La colonia", &r.Address.Neighborhood, 200}, {"La ciudad", &r.Address.City, 100},
 		{"El estado", &r.Address.State, 100}, {"El código postal", &r.Address.PostCode, 20},
 		{"El país", &r.Address.Country, 100},
 	} {
@@ -91,19 +93,19 @@ func (r *SaveOrganizationRequest) normalize() error {
 
 const orgSelect = `
 	SELECT o.id, o.name, o.email, o.website, o.active, o.phone1, o.phone2,
-	       o.address, o.city, o.state, o.post_code, o.country,
+	       o.address, o.neighborhood, o.city, o.state, o.post_code, o.country,
 	       (SELECT COUNT(*) FROM users u WHERE u.organization_id = o.id AND u.deleted_at IS NULL)
 	FROM organizations o`
 
 func scanOrganization(sc interface{ Scan(...any) error }) (*Organization, error) {
 	var o Organization
-	var website, p1, p2, a, c, s, pc, co sql.NullString
-	if err := sc.Scan(&o.ID, &o.Name, &o.Email, &website, &o.Active, &p1, &p2, &a, &c, &s, &pc, &co, &o.Employees); err != nil {
+	var website, p1, p2, a, nb, c, s, pc, co sql.NullString
+	if err := sc.Scan(&o.ID, &o.Name, &o.Email, &website, &o.Active, &p1, &p2, &a, &nb, &c, &s, &pc, &co, &o.Employees); err != nil {
 		return nil, err
 	}
 	o.Website, o.Phone1, o.Phone2 = strOrEmpty(website), strOrEmpty(p1), strOrEmpty(p2)
 	o.Phone = o.Phone1
-	o.Address = Address{strOrEmpty(a), strOrEmpty(c), strOrEmpty(s), strOrEmpty(pc), strOrEmpty(co)}
+	o.Address = Address{Address: strOrEmpty(a), Neighborhood: strOrEmpty(nb), City: strOrEmpty(c), State: strOrEmpty(s), PostCode: strOrEmpty(pc), Country: strOrEmpty(co)}
 	return &o, nil
 }
 
@@ -147,10 +149,10 @@ func CreateOrganization(r SaveOrganizationRequest) (*Organization, error) {
 	err := withTx(func(tx *sql.Tx) error {
 		var err error
 		id, err = insert(tx, `INSERT INTO organizations
-			(name, email, website, active, phone1, phone2, address, city, state, post_code, country)
-			VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+			(name, email, website, active, phone1, phone2, address, neighborhood, city, state, post_code, country)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
 			r.Name, r.Email, r.Website, active, r.Phone1, r.Phone2,
-			r.Address.Address, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country)
+			r.Address.Address, r.Address.Neighborhood, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country)
 		if err != nil {
 			return err
 		}
@@ -214,10 +216,10 @@ func UpdateOrganization(id string, r SaveOrganizationRequest) (*Organization, er
 	}
 	_, err := db.DB.Exec(`UPDATE organizations SET
 			name=?, email=?, website=?, phone1=?, phone2=?,
-			address=?, city=?, state=?, post_code=?, country=?
+			address=?, neighborhood=?, city=?, state=?, post_code=?, country=?
 		WHERE id=?`,
 		r.Name, r.Email, r.Website, r.Phone1, r.Phone2,
-		r.Address.Address, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country, id)
+		r.Address.Address, r.Address.Neighborhood, r.Address.City, r.Address.State, r.Address.PostCode, r.Address.Country, id)
 	if err != nil {
 		return nil, err
 	}

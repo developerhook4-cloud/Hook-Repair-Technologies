@@ -25,3 +25,6 @@ Thumbs.db
 *.key
 
 
+
+# Catálogo SEPOMEX: sus términos prohíben distribuirlo; se descarga aparte (ver db/data/README.md)
+/db/data/sepomex.tsv*

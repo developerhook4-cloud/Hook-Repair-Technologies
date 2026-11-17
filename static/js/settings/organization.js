@@ -31,6 +31,8 @@
   );
 
   ui.phoneInputs(form);
+  // Al escribir el código postal llena estado, ciudad, país y ofrece las colonias (KAN-102).
+  ui.addressAutofill(form);
 
   if (!canEdit) {
     form.querySelectorAll('input, select, textarea').forEach((el) => (el.disabled = true));
@@ -49,6 +51,7 @@
       set('phone2', o.phone2);
       set('website', o.website);
       set('address', a.address);
+      set('neighborhood', a.neighborhood);
       set('city', a.city);
       set('state', a.state);
       set('postCode', a.postCode);
@@ -72,7 +75,7 @@
           phone1: f.phone1.trim(),
           phone2: f.phone2.trim(),
           website: f.website.trim(),
-          address: { address: f.address.trim(), city: f.city.trim(), state: f.state.trim(), postCode: f.postCode.trim(), country: f.country.trim() },
+          address: { address: f.address.trim(), neighborhood: f.neighborhood.trim(), city: f.city.trim(), state: f.state.trim(), postCode: f.postCode.trim(), country: f.country.trim() },
         });
         ui.toast('Cambios guardados');
       } catch (err) {

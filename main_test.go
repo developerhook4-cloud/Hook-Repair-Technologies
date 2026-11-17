@@ -108,6 +108,10 @@ func app(t *testing.T) *testApp {
 		os.Unsetenv("RAILWAY_ENVIRONMENT")
 		os.Unsetenv("APP_ENV")
 		db.EnsureSchema()
+		// Catálogo postal chico de pruebas (postal_test.go), no el SEPOMEX completo.
+		if _, testServerErr = db.LoadPostalCatalog(strings.NewReader(postalFixture)); testServerErr != nil {
+			return
+		}
 		models.SeedRootAdmin()
 		models.EnsureDefaultRoles()
 		auth.InitStore()
