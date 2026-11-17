@@ -127,25 +127,50 @@ func (r *ProductRequest) validateCommon() error {
 // validateReferences revisa que categoría, marca, proveedor y modelos existan
 // y estén activos en la organización (y que los modelos sean de esa marca).
 func (r *ProductRequest) validateReferences(orgID string, modelIDs []string) error {
+	// Cada mensaje nombra el campo que falla (KAN-94): un registro eliminado ya
+	// no existe para la validación, y uno inactivo no se puede elegir.
 	if id := idOrNil(r.CategoryID); id != nil {
-		if c, err := GetCategory(orgID, id.(string)); err != nil || !c.Active {
-			return Invalid("La categoría no existe o está inactiva.")
+		c, err := GetCategory(orgID, id.(string))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("La categoría seleccionada ya no existe; elige otra.")
+		case err != nil:
+			return err
+		case !c.Active:
+			return Invalid("La categoría seleccionada está inactiva; elige otra.")
 		}
 	}
 	if id := idOrNil(r.BrandID); id != nil {
-		if b, err := GetBrand(orgID, id.(string)); err != nil || !b.Active {
-			return Invalid("La marca no existe o está inactiva.")
+		b, err := GetBrand(orgID, id.(string))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("La marca seleccionada ya no existe; elige otra.")
+		case err != nil:
+			return err
+		case !b.Active:
+			return Invalid("La marca seleccionada está inactiva; elige otra.")
 		}
 	}
 	if id := idOrNil(r.SupplierID); id != nil {
-		if s, err := GetSupplier(orgID, id.(string)); err != nil || !s.Active {
-			return Invalid("El proveedor no existe o está inactivo.")
+		s, err := GetSupplier(orgID, id.(string))
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("El proveedor seleccionado ya no existe; elige otro.")
+		case err != nil:
+			return err
+		case !s.Active:
+			return Invalid("El proveedor seleccionado está inactivo; elige otro.")
 		}
 	}
 	for _, mid := range modelIDs {
 		m, err := GetDeviceModel(orgID, mid)
-		if err != nil || !m.Active {
-			return Invalid("El modelo no existe o está inactivo.")
+		switch {
+		case errors.Is(err, ErrNotFound):
+			return Invalid("Un modelo seleccionado ya no existe; quítalo o elige otro.")
+		case err != nil:
+			return err
+		case !m.Active:
+			return Invalid("El modelo %s está inactivo; quítalo o elige otro.", m.Name)
 		}
 		if b := idOrNil(r.BrandID); b != nil && m.BrandID != b.(string) {
 			return Invalid("El modelo %s no pertenece a la marca seleccionada.", m.Name)
@@ -167,14 +192,14 @@ func stockStatus(inStock, warning int) string {
 
 const productSelect = `
 	SELECT p.id, p.name,
-	       p.category_id, c.name, p.brand_id, b.name,
-	       p.supplier_id, s.name, COALESCE(p.upc, ''), p.image_url, p.item_condition,
+	       c.id, c.name, b.id, b.name,
+	       s.id, s.name, COALESCE(p.upc, ''), p.image_url, p.item_condition,
 	       p.in_stock, p.stock_warning, p.reorder_point,
 	       p.cost_price, p.general_price, p.distributor_price, p.is_serialized, p.active
 	FROM products p
-	LEFT JOIN categories c ON c.id = p.category_id
-	LEFT JOIN brands b ON b.id = p.brand_id
-	LEFT JOIN suppliers s ON s.id = p.supplier_id`
+	LEFT JOIN categories c ON c.id = p.category_id AND c.deleted_at IS NULL
+	LEFT JOIN brands b ON b.id = p.brand_id AND b.deleted_at IS NULL
+	LEFT JOIN suppliers s ON s.id = p.supplier_id AND s.deleted_at IS NULL`
 
 func scanProduct(sc interface{ Scan(...any) error }) (*Product, error) {
 	var p Product
@@ -210,7 +235,7 @@ func fillProductDetails(list []*Product) error {
 	in := placeholders(len(ids))
 
 	rows, err := db.DB.Query(`SELECT pm.product_id, m.id, m.name
-		FROM product_models pm JOIN device_models m ON m.id = pm.model_id
+		FROM product_models pm JOIN device_models m ON m.id = pm.model_id AND m.deleted_at IS NULL
 		WHERE pm.product_id IN (`+in+`) ORDER BY m.name`, anySlice(ids)...)
 	if err != nil {
 		return err
@@ -228,7 +253,7 @@ func fillProductDetails(list []*Product) error {
 	}
 	rows.Close()
 
-	rows, err = db.DB.Query(`SELECT product_id, imei FROM product_serials WHERE product_id IN (`+in+`) ORDER BY imei`, anySlice(ids)...)
+	rows, err = db.DB.Query(`SELECT product_id, imei FROM product_serials WHERE product_id IN (`+in+`) AND deleted_at IS NULL ORDER BY imei`, anySlice(ids)...)
 	if err != nil {
 		return err
 	}
@@ -249,6 +274,9 @@ func fillProductDetails(list []*Product) error {
 	}
 	return rows.Err()
 }
+
+// Categoría, marca, proveedor y modelos eliminados no se muestran en la lectura
+// (el producto conserva el id guardado; solo deja de verse): KAN-145.
 
 // GetProducts — productos de la organización. Con onlyActive solo los activos.
 func GetProducts(orgID string, onlyActive bool) ([]Product, error) {
@@ -334,6 +362,11 @@ func CreateProduct(orgID string, r ProductRequest) (*Product, error) {
 	serials, err := cleanSerials(r.SerialNumbers)
 	if err != nil {
 		return nil, err
+	}
+	// En un producto serializado hay un IMEI por cada pieza del stock, siempre
+	// (también con stock 0: cero IMEI). KAN-144.
+	if serialized && inStock == 0 && len(serials) > 0 {
+		return nil, Invalid("Con stock inicial 0 no se pueden registrar IMEI / series (llevas %d).", len(serials))
 	}
 	if serialized && inStock > 0 && len(serials) != inStock {
 		return nil, Invalid("Ingresa los %d IMEI / series del stock inicial (llevas %d).", inStock, len(serials))

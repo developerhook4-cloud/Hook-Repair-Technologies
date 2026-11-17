@@ -114,14 +114,31 @@ func (r *ClientRequest) validate() error {
 	if name == "" || runeLen(name) > 200 {
 		return Invalid("El nombre debe tener entre 1 y 200 caracteres.")
 	}
-	if err := validPhone("teléfono", strVal(r.Phone1), true); err != nil {
+	// Los teléfonos se guardan solo con dígitos (y "+" al inicio): KAN-145.
+	p1, err := normalizePhone("teléfono", strVal(r.Phone1), true)
+	if err != nil {
 		return err
 	}
-	if err := validPhone("celular", strVal(r.Phone2), false); err != nil {
+	r.Phone1 = &p1
+	p2, err := normalizePhone("celular", strVal(r.Phone2), false)
+	if err != nil {
 		return err
 	}
+	r.Phone2 = &p2
 	if e := strVal(r.Email); e != "" && (runeLen(e) > 254 || !IsEmail(e)) {
 		return Invalid("El email debe ser válido (máximo 254 caracteres).")
+	}
+	// Largos de las columnas de customers (db/schema.sql).
+	for _, f := range []struct {
+		label string
+		v     *string
+	}{
+		{"La razón social", r.LegalName}, {"El titular", r.TitularName},
+		{"El régimen fiscal", r.TaxRegime}, {"El uso de CFDI", r.ExpenseType},
+	} {
+		if runeLen(strVal(f.v)) > 200 {
+			return Invalid("%s no puede pasar de 200 caracteres.", f.label)
+		}
 	}
 	// Facturación: si trae cualquiera de los datos fiscales, se piden los tres.
 	rfc := strings.ToUpper(strVal(r.Rfc))
@@ -292,12 +309,17 @@ func (r *SupplierRequest) validate() error {
 	if name == "" || runeLen(name) > 200 {
 		return Invalid("El nombre debe tener entre 1 y 200 caracteres.")
 	}
-	if err := validPhone("teléfono", strVal(r.Phone1), true); err != nil {
+	// Los teléfonos se guardan solo con dígitos (y "+" al inicio): KAN-145.
+	p1, err := normalizePhone("teléfono", strVal(r.Phone1), true)
+	if err != nil {
 		return err
 	}
-	if err := validPhone("teléfono alternativo", strVal(r.Phone2), false); err != nil {
+	r.Phone1 = &p1
+	p2, err := normalizePhone("teléfono alternativo", strVal(r.Phone2), false)
+	if err != nil {
 		return err
 	}
+	r.Phone2 = &p2
 	e := strVal(r.Email)
 	if e == "" {
 		return Invalid("El email es obligatorio.")

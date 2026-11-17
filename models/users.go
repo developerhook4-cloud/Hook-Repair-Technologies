@@ -107,7 +107,7 @@ func (r *SaveUserRequest) normalize(requirePassword bool) error {
 	if r.Name == "" || runeLen(r.Name) > 150 {
 		return Invalid("El nombre es obligatorio (máximo 150 caracteres).")
 	}
-	if r.Email == "" || !IsEmail(r.Email) || runeLen(r.Email) > 320 {
+	if r.Email == "" || !IsEmail(r.Email) || runeLen(r.Email) > 255 {
 		return Invalid("El email es obligatorio y debe ser válido.")
 	}
 	if requirePassword && strings.TrimSpace(r.Password) == "" {

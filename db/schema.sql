@@ -206,14 +206,18 @@ CREATE TABLE IF NOT EXISTS product_models (
   CONSTRAINT fk_product_models_model   FOREIGN KEY (model_id)   REFERENCES device_models(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- IMEI / número de serie de cada pieza de un producto serializado
+-- IMEI / número de serie de cada pieza de un producto serializado.
+-- Al eliminar el producto se marca deleted_at en sus series: así su IMEI se
+-- puede volver a registrar (imei_live vale NULL en lo eliminado).
 CREATE TABLE IF NOT EXISTS product_serials (
   id              BIGINT AUTO_INCREMENT PRIMARY KEY,
   organization_id BIGINT       NOT NULL,
   product_id      BIGINT       NOT NULL,
   imei            VARCHAR(100) NOT NULL,
   status          VARCHAR(50)  NOT NULL DEFAULT 'Disponible',
-  UNIQUE KEY uq_product_serials_imei (organization_id, imei),
+  deleted_at      DATETIME     NULL,
+  imei_live       VARCHAR(100) GENERATED ALWAYS AS (IF(deleted_at IS NULL, imei, NULL)) STORED,
+  UNIQUE KEY uq_product_serials_imei (organization_id, imei_live),
   CONSTRAINT fk_product_serials_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

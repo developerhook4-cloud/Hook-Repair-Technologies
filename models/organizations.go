@@ -57,11 +57,11 @@ func (r *SaveOrganizationRequest) normalize() error {
 	if r.Email == "" || !IsEmail(r.Email) || runeLen(r.Email) > 200 {
 		return Invalid("El email es obligatorio y debe ser válido.")
 	}
-	r.Phone1, r.Phone2 = strings.TrimSpace(r.Phone1), strings.TrimSpace(r.Phone2)
-	if err := validPhone("teléfono", r.Phone1, false); err != nil {
+	var err error
+	if r.Phone1, err = normalizePhone("teléfono", r.Phone1, false); err != nil {
 		return err
 	}
-	if err := validPhone("celular", r.Phone2, false); err != nil {
+	if r.Phone2, err = normalizePhone("celular", r.Phone2, false); err != nil {
 		return err
 	}
 	if runeLen(r.Website) > 500 {
@@ -69,6 +69,22 @@ func (r *SaveOrganizationRequest) normalize() error {
 	}
 	if r.Address == nil {
 		r.Address = &Address{}
+	}
+	// Largos de las columnas address_* de organizations (db/schema.sql): con
+	// MySQL estricto pasarse da error 500 en vez de un 400 claro (KAN-145).
+	for _, f := range []struct {
+		label string
+		v     *string
+		max   int
+	}{
+		{"La dirección", &r.Address.Address, 300}, {"La ciudad", &r.Address.City, 100},
+		{"El estado", &r.Address.State, 100}, {"El código postal", &r.Address.PostCode, 20},
+		{"El país", &r.Address.Country, 100},
+	} {
+		*f.v = strings.TrimSpace(*f.v)
+		if runeLen(*f.v) > f.max {
+			return Invalid("%s no puede pasar de %d caracteres.", f.label, f.max)
+		}
 	}
 	return nil
 }

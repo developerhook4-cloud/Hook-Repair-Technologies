@@ -655,12 +655,15 @@
 
   // ── Teléfonos, contraseñas y RFC (mismas reglas que el servidor) ──
 
-  /** Teléfono válido: solo números (+, espacios, guiones, paréntesis) y máx. 15 dígitos. */
+  /**
+   * Teléfono válido: solo números (+ solo al inicio, espacios, guiones, paréntesis) y máx.
+   * 15 dígitos. El servidor lo guarda solo con dígitos (y el + inicial).
+   */
   ui.isPhone = (v) => {
     const t = String(v || '').trim();
     if (!t) return true;
     const digits = t.replace(/\D/g, '').length;
-    return /^[0-9+\-\s().]+$/.test(t) && digits >= 1 && digits <= 15;
+    return /^\+?[0-9\-\s().]+$/.test(t) && digits >= 1 && digits <= 15;
   };
 
   /** Contraseña segura: 8+ caracteres, con al menos una letra y un número. */

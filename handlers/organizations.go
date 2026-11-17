@@ -103,8 +103,28 @@ func ListOrganizationUsers(c *gin.Context) {
 	c.JSON(http.StatusOK, users)
 }
 
+// ListOrganizationRoles — GET /api/organizations/:id/roles
+// Los roles de esa organización (para elegir el rol de sus usuarios).
+func ListOrganizationRoles(c *gin.Context) {
+	id, ok := idParam(c, "id")
+	if !ok {
+		return
+	}
+	if _, err := models.GetOrganization(id); err != nil {
+		respondError(c, err, "organization")
+		return
+	}
+	roles, err := models.GetRoles(id)
+	if err != nil {
+		respondError(c, err, "role")
+		return
+	}
+	c.JSON(http.StatusOK, roles)
+}
+
 // CreateOrganizationUser — POST /api/organizations/:id/users
-// Si no trae rol se le asigna "Administrador" de esa organización.
+// Acepta roleId (debe ser un rol de esa organización); si no trae rol se le
+// asigna "Administrador" de esa organización.
 func CreateOrganizationUser(c *gin.Context) {
 	id, ok := idParam(c, "id")
 	if !ok {
@@ -126,6 +146,7 @@ func CreateOrganizationUser(c *gin.Context) {
 }
 
 // UpdateOrganizationUser — PUT /api/organizations/:id/users/:userId
+// (roleId opcional: cambia el rol, que debe ser de esa organización).
 func UpdateOrganizationUser(c *gin.Context) {
 	id, ok := idParam(c, "id")
 	if !ok {
@@ -139,16 +160,17 @@ func UpdateOrganizationUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
+	// Se revisa antes de cambiar nada: nadie se desactiva a sí mismo (KAN-145).
+	if in.Active != nil && !*in.Active && userID == currentUser(c).ID {
+		problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
+		return
+	}
 	u, err := models.UpdateUser(currentUser(c), id, userID, in)
 	if err != nil {
 		respondError(c, err, "user")
 		return
 	}
 	if in.Active != nil && *in.Active != u.Active {
-		if !*in.Active && userID == currentUser(c).ID {
-			problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
-			return
-		}
 		if err := models.SetUserStatus(currentUser(c), id, userID, *in.Active); err != nil {
 			respondError(c, err, "user")
 			return

@@ -40,14 +40,14 @@ type SaveServiceRequest struct {
 
 const serviceSelect = `
 	SELECT s.id, s.name, s.description,
-	       s.category_id, COALESCE(c.name, ''),
-	       s.brand_id, COALESCE(b.name, ''),
-	       s.model_id, COALESCE(m.name, ''),
+	       c.id, COALESCE(c.name, ''),
+	       b.id, COALESCE(b.name, ''),
+	       m.id, COALESCE(m.name, ''),
 	       s.retail_price, s.public_price, s.distributor_price, s.active
 	FROM repair_services s
-	LEFT JOIN categories c ON c.id = s.category_id
-	LEFT JOIN brands b ON b.id = s.brand_id
-	LEFT JOIN device_models m ON m.id = s.model_id`
+	LEFT JOIN categories c ON c.id = s.category_id AND c.deleted_at IS NULL
+	LEFT JOIN brands b ON b.id = s.brand_id AND b.deleted_at IS NULL
+	LEFT JOIN device_models m ON m.id = s.model_id AND m.deleted_at IS NULL`
 
 func scanService(sc interface{ Scan(...any) error }) (*Service, error) {
 	var s Service
@@ -104,19 +104,26 @@ func (r *SaveServiceRequest) validate(orgID string) error {
 			return Invalid("El %s es obligatorio y debe ser 0 o mayor.", p.label)
 		}
 	}
+	// Cada mensaje nombra el campo que falla (KAN-94).
 	if id := idOrNil(r.CategoryID); id != nil {
-		if _, err := GetCategory(orgID, id.(string)); err != nil {
-			return Invalid("La categoría no existe en esta organización.")
+		if _, err := GetCategory(orgID, id.(string)); errors.Is(err, ErrNotFound) {
+			return Invalid("La categoría seleccionada ya no existe; elige otra.")
+		} else if err != nil {
+			return err
 		}
 	}
 	if id := idOrNil(r.BrandID); id != nil {
-		if _, err := GetBrand(orgID, id.(string)); err != nil {
-			return Invalid("La marca no existe en esta organización.")
+		if _, err := GetBrand(orgID, id.(string)); errors.Is(err, ErrNotFound) {
+			return Invalid("La marca seleccionada ya no existe; elige otra.")
+		} else if err != nil {
+			return err
 		}
 	}
 	if id := idOrNil(r.ModelID); id != nil {
-		if _, err := GetDeviceModel(orgID, id.(string)); err != nil {
-			return Invalid("El modelo no existe en esta organización.")
+		if _, err := GetDeviceModel(orgID, id.(string)); errors.Is(err, ErrNotFound) {
+			return Invalid("El modelo seleccionado ya no existe; elige otro.")
+		} else if err != nil {
+			return err
 		}
 	}
 	return nil
