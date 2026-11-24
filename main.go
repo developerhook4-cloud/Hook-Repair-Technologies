@@ -114,7 +114,7 @@ func setupRouter() *gin.Engine {
 
 	pages := router.Group("/", h.RequirePage())
 	{
-		pages.GET("/dashboard", h.Page("dashboard", "Dashboard", ""))
+		pages.GET("/dashboard", h.Page("dashboard", "Dashboard", "/static/js/dashboard/dashboard.js"))
 		pages.GET("/organizations", h.RequirePagePlatform(), h.RequirePagePermission(models.ViewOrganizations),
 			h.Page("organizations", "Organizaciones", "/static/js/organizations/organizations.js"))
 		pages.GET("/point-of-sale", h.ComingSoon("Punto de venta", ""))
@@ -221,6 +221,7 @@ func setupRouter() *gin.Engine {
 	crud("/products", models.ViewInventory, models.UpdateInventory, models.DeleteInventory,
 		h.ListProducts, h.GetProduct, h.CreateProduct, h.UpdateProduct, h.UpdateProductStatus, h.DeleteProduct)
 
+	tenant.GET("/dashboard/summary", h.GetDashboardSummary)
 	mv := tenant.Group("/inventory/movements")
 	mv.GET("", h.RequirePermission(models.ViewInventory), h.ListMovements)
 	mv.GET("/:id", h.RequirePermission(models.ViewInventory), h.GetMovement)

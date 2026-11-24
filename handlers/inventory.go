@@ -187,3 +187,14 @@ func CreateGoodsReceipt(c *gin.Context) {
 	}
 	mutation(c, http.StatusCreated, out.ID, "Recepción registrada exitosamente.")
 }
+
+// GetDashboardSummary — resumen de inventario y clientes de la organización.
+func GetDashboardSummary(c *gin.Context) {
+	summary, err := models.GetDashboardSummary(orgOf(c))
+	if err != nil {
+		respondError(c, err, "dashboard")
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
+}
