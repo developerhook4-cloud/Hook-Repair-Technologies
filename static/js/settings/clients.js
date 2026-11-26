@@ -115,7 +115,10 @@
           <div class="client-modal__cols">
             <div class="form-stack form-stack--roomy client-modal__col">
               ${input('Nombre', 'name', c.name, 'Introduzca el nombre del cliente', { required: true })}
-              ${input('Número de teléfono', 'phone1', c.phone1, '662 123 4567', { required: true, phone: true })}
+              <div class="field">
+                <label class="label-normal field__label">Teléfonos <span class="req">*</span></label>
+                <div data-phones></div>
+              </div>
               <div class="field">
                 <label class="label-normal field__label">Tipo de cliente <span class="req">*</span></label>
                 <div id="ddType"></div>
@@ -145,7 +148,6 @@
                 <h3 class="label-normal section-label">Datos de distribuidor</h3>
                 <div class="form-grid">
                   ${input('Nombre comercial', 'legalName', c.legalName, 'Introduzca el nombre del local', { small: true })}
-                  ${input('Celular', 'phone2', c.phone2, '662 123 4567', { small: true, phone: true })}
                   ${input('Nombre del titular', 'titularName', c.titularName, 'Introduzca el nombre del titular', { small: true })}
                   ${input('Email', 'email', c.email, 'cliente@email.com', { small: true, type: 'email' })}
                 </div>
@@ -208,6 +210,7 @@
     }
     applyType();
     ui.phoneInputs(form);
+    const phoneList = ui.phoneList(m.el.querySelector('[data-phones]'), ui.phonesOf(c), { required: true });
     // Código postal → estado, ciudad, país y colonias (KAN-102). El estado es un dropdown.
     ui.addressAutofill(form, {
       setState: (estado) => {
@@ -223,8 +226,6 @@
       form,
       {
         name: [ui.rules.required],
-        phone1: [ui.rules.required, ui.rules.phone],
-        phone2: [ui.rules.phone],
         email: [ui.rules.email],
         rfc: [
           [(x, all) => !all.requiresInvoice || !!x, 'El RFC es obligatorio para facturar.'],
@@ -239,7 +240,7 @@
       const missing = invoice && (!cur.taxRegime || !cur.expenseType);
       invoiceError.hidden = !missing;
       invoiceError.textContent = missing ? 'Selecciona el régimen fiscal y el uso de CFDI.' : '';
-      save.disabled = !ok || missing;
+      save.disabled = !ok || missing || !!phoneList.error();
     }
     form.addEventListener('input', validate);
     form.addEventListener('focusout', () => setTimeout(validate));
@@ -256,8 +257,7 @@
         const payload = {
           name: f.name.trim(),
           customerType: cur.type,
-          phone1: f.phone1.trim(),
-          phone2: f.phone2.trim() || null,
+          phones: phoneList.get(),
           legalName: f.legalName.trim() || null,
           email: f.email.trim() || null,
           address: {

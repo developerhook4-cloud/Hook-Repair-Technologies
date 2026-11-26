@@ -76,6 +76,7 @@ type Client struct {
 	CustomerType     CustomerType     `json:"customerType"`
 	Phone1           string           `json:"phone1"`
 	Phone2           *string          `json:"phone2"`
+	Phones           []Phone          `json:"phones"` // todos los teléfonos (KAN-101)
 	LegalName        *string          `json:"legalName"`
 	Email            *string          `json:"email"`
 	Address          *NullableAddress `json:"address"`
@@ -101,6 +102,10 @@ type ClientRequest struct {
 	Rfc              *string          `json:"rfc"`
 	TaxRegime        *string          `json:"taxRegime"`
 	ExpenseType      *string          `json:"expenseType"`
+	// Phones — teléfonos múltiples (KAN-101). Si no viene, se usan phone1 / phone2.
+	Phones []Phone `json:"phones"`
+
+	phones []Phone // lista ya validada (la llena validate)
 }
 
 func strVal(p *string) string {
@@ -117,16 +122,15 @@ func (r *ClientRequest) validate() error {
 		return Invalid("El nombre debe tener entre 1 y 200 caracteres.")
 	}
 	// Los teléfonos se guardan solo con dígitos (y "+" al inicio): KAN-145.
-	p1, err := normalizePhone("teléfono", strVal(r.Phone1), true)
+	var err error
+	r.phones, err = resolvePhones(r.Phones, strVal(r.Phone1), strVal(r.Phone2),
+		phoneRules{required: true, label1: "teléfono", label2: "celular", kind2: "celular"})
 	if err != nil {
 		return err
 	}
-	r.Phone1 = &p1
-	p2, err := normalizePhone("celular", strVal(r.Phone2), false)
-	if err != nil {
-		return err
-	}
-	r.Phone2 = &p2
+	// phone1 / phone2 se mantienen iguales a los dos primeros números.
+	p1, p2 := legacyPhones(r.phones)
+	r.Phone1, r.Phone2 = &p1, &p2
 	if e := strVal(r.Email); e != "" && (runeLen(e) > 254 || !IsEmail(e)) {
 		return Invalid("El email debe ser válido (máximo 254 caracteres).")
 	}
@@ -224,7 +228,22 @@ func GetClients(orgID string) ([]Client, error) {
 		}
 		out = append(out, *c)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	ids := make([]string, len(out))
+	for i := range out {
+		ids[i] = out[i].ID
+	}
+	phones, err := loadPhones(ownerCustomer, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Phones = phones[out[i].ID]
+	}
+	return out, nil
 }
 
 // GetClient por id.
@@ -233,7 +252,15 @@ func GetClient(orgID, id string) (*Client, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return c, err
+	if err != nil {
+		return nil, err
+	}
+	phones, err := loadPhones(ownerCustomer, []string{c.ID})
+	if err != nil {
+		return nil, err
+	}
+	c.Phones = phones[c.ID]
+	return c, nil
 }
 
 func (r *ClientRequest) args() []any {
@@ -256,11 +283,19 @@ func CreateClient(orgID string, r ClientRequest) (*Client, error) {
 		return nil, err
 	}
 	args := append([]any{orgID}, r.args()...)
-	id, err := insert(db.DB, `INSERT INTO customers
-		(organization_id, customer_type, name, phone1, phone2, legal_name, email,
-		 address, neighborhood, city, state, post_code, country,
-		 titular_name, authorized_people, rfc, tax_regime, expense_type, active)
-		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`, args...)
+	var id string
+	err := withTx(func(tx *sql.Tx) error {
+		var err error
+		id, err = insert(tx, `INSERT INTO customers
+			(organization_id, customer_type, name, phone1, phone2, legal_name, email,
+			 address, neighborhood, city, state, post_code, country,
+			 titular_name, authorized_people, rfc, tax_regime, expense_type, active)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`, args...)
+		if err != nil {
+			return err
+		}
+		return savePhones(tx, ownerCustomer, orgID, id, r.phones)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -273,16 +308,22 @@ func UpdateClient(orgID, id string, r ClientRequest) (*Client, error) {
 		return nil, err
 	}
 	args := append(r.args(), id, orgID)
-	res, err := db.DB.Exec(`UPDATE customers SET
+	err := withTx(func(tx *sql.Tx) error {
+		res, err := tx.Exec(`UPDATE customers SET
 			customer_type=?, name=?, phone1=?, phone2=?, legal_name=?, email=?,
 			address=?, neighborhood=?, city=?, state=?, post_code=?, country=?,
 			titular_name=?, authorized_people=?, rfc=?, tax_regime=?, expense_type=?
 		WHERE id=? AND organization_id=? AND deleted_at IS NULL`, args...)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ErrNotFound
+		}
+		return savePhones(tx, ownerCustomer, orgID, id, r.phones)
+	})
 	if err != nil {
 		return nil, err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return nil, ErrNotFound
 	}
 	return GetClient(orgID, id)
 }
@@ -295,6 +336,7 @@ type Supplier struct {
 	Name   string  `json:"name"`
 	Phone1 string  `json:"phone1"`
 	Phone2 *string `json:"phone2"`
+	Phones []Phone `json:"phones"` // todos los teléfonos (KAN-101)
 	Email  string  `json:"email"`
 	Active bool    `json:"active"`
 }
@@ -305,6 +347,10 @@ type SupplierRequest struct {
 	Phone1 *string `json:"phone1"`
 	Phone2 *string `json:"phone2"`
 	Email  *string `json:"email"`
+	// Phones — teléfonos múltiples (KAN-101). Si no viene, se usan phone1 / phone2.
+	Phones []Phone `json:"phones"`
+
+	phones []Phone // lista ya validada (la llena validate)
 }
 
 func (r *SupplierRequest) validate() error {
@@ -313,16 +359,15 @@ func (r *SupplierRequest) validate() error {
 		return Invalid("El nombre debe tener entre 1 y 200 caracteres.")
 	}
 	// Los teléfonos se guardan solo con dígitos (y "+" al inicio): KAN-145.
-	p1, err := normalizePhone("teléfono", strVal(r.Phone1), true)
+	var err error
+	r.phones, err = resolvePhones(r.Phones, strVal(r.Phone1), strVal(r.Phone2),
+		phoneRules{required: true, label1: "teléfono", label2: "teléfono alternativo", kind2: "fijo"})
 	if err != nil {
 		return err
 	}
-	r.Phone1 = &p1
-	p2, err := normalizePhone("teléfono alternativo", strVal(r.Phone2), false)
-	if err != nil {
-		return err
-	}
-	r.Phone2 = &p2
+	// phone1 / phone2 se mantienen iguales a los dos primeros números.
+	p1, p2 := legacyPhones(r.phones)
+	r.Phone1, r.Phone2 = &p1, &p2
 	e := strVal(r.Email)
 	if e == "" {
 		return Invalid("El email es obligatorio.")
@@ -360,7 +405,22 @@ func GetSuppliers(orgID string) ([]Supplier, error) {
 		}
 		out = append(out, *s)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	ids := make([]string, len(out))
+	for i := range out {
+		ids[i] = out[i].ID
+	}
+	phones, err := loadPhones(ownerSupplier, ids)
+	if err != nil {
+		return nil, err
+	}
+	for i := range out {
+		out[i].Phones = phones[out[i].ID]
+	}
+	return out, nil
 }
 
 // GetSupplier por id.
@@ -369,7 +429,15 @@ func GetSupplier(orgID, id string) (*Supplier, error) {
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
-	return s, err
+	if err != nil {
+		return nil, err
+	}
+	phones, err := loadPhones(ownerSupplier, []string{s.ID})
+	if err != nil {
+		return nil, err
+	}
+	s.Phones = phones[s.ID]
+	return s, nil
 }
 
 // CreateSupplier crea un proveedor.
@@ -377,8 +445,16 @@ func CreateSupplier(orgID string, r SupplierRequest) (*Supplier, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
-	id, err := insert(db.DB, `INSERT INTO suppliers (organization_id, name, phone1, phone2, email, active)
-		VALUES (?,?,?,?,?,1)`, orgID, strVal(r.Name), strVal(r.Phone1), trimOrNil(r.Phone2), strVal(r.Email))
+	var id string
+	err := withTx(func(tx *sql.Tx) error {
+		var err error
+		id, err = insert(tx, `INSERT INTO suppliers (organization_id, name, phone1, phone2, email, active)
+			VALUES (?,?,?,?,?,1)`, orgID, strVal(r.Name), strVal(r.Phone1), trimOrNil(r.Phone2), strVal(r.Email))
+		if err != nil {
+			return err
+		}
+		return savePhones(tx, ownerSupplier, orgID, id, r.phones)
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -390,13 +466,19 @@ func UpdateSupplier(orgID, id string, r SupplierRequest) (*Supplier, error) {
 	if err := r.validate(); err != nil {
 		return nil, err
 	}
-	res, err := db.DB.Exec(`UPDATE suppliers SET name=?, phone1=?, phone2=?, email=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`,
-		strVal(r.Name), strVal(r.Phone1), trimOrNil(r.Phone2), strVal(r.Email), orgID, id)
+	err := withTx(func(tx *sql.Tx) error {
+		res, err := tx.Exec(`UPDATE suppliers SET name=?, phone1=?, phone2=?, email=? WHERE organization_id=? AND id=? AND deleted_at IS NULL`,
+			strVal(r.Name), strVal(r.Phone1), trimOrNil(r.Phone2), strVal(r.Email), orgID, id)
+		if err != nil {
+			return err
+		}
+		if n, _ := res.RowsAffected(); n == 0 {
+			return ErrNotFound
+		}
+		return savePhones(tx, ownerSupplier, orgID, id, r.phones)
+	})
 	if err != nil {
 		return nil, err
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return nil, ErrNotFound
 	}
 	return GetSupplier(orgID, id)
 }

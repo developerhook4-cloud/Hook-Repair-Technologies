@@ -359,19 +359,100 @@
     }
     const receive = m.el.querySelector('[data-receive]');
     if (receive) {
-      receive.addEventListener('click', () =>
-        ui.busy(receive, async () => {
-          try {
-            await Hook.post(Hook.org('goods-receipts'), { purchaseOrderId: order.id, lines: null, notes: null });
-            m.close();
-            ui.toast('Recepción registrada');
-            load();
-          } catch (err) {
-            ui.error(err, 'No se pudo registrar la recepción.');
-          }
-        })
-      );
+      // Con productos serializados pendientes se piden los IMEI de cada pieza (KAN-137).
+      const serialLines = lines.filter((l) => l.isSerialized && l.pendingQuantity > 0);
+      if (serialLines.length) {
+        receive.addEventListener('click', () => openReceiveSerials(order, serialLines, m));
+      } else {
+        receive.addEventListener('click', () =>
+          ui.busy(receive, async () => {
+            try {
+              await Hook.post(Hook.org('goods-receipts'), { purchaseOrderId: order.id, lines: null, notes: null });
+              m.close();
+              ui.toast('Recepción registrada');
+              load();
+            } catch (err) {
+              ui.error(err, 'No se pudo registrar la recepción.');
+            }
+          })
+        );
+      }
     }
+  }
+
+  // ── Recepción con IMEI: un campo por cada pieza pendiente de los serializados ──
+  function openReceiveSerials(order, serialLines, detailModal) {
+    const entered = {}; // lineId -> [imei, ...]
+    serialLines.forEach((l) => (entered[l.id] = Array(l.pendingQuantity).fill('')));
+    const m = ui.modal(`
+      <div class="modal-card modal-card--lg modal-card--clip">
+        <div class="modal-body">
+          ${ui.modalHeader('Recibir mercancía: captura los IMEI')}
+          <p class="body-normal">Cada pieza serializada necesita su IMEI / serie. Se recibe todo lo pendiente de la orden.</p>
+          <div data-serial-lines class="modal-scroll modal-scroll--stack">
+            ${serialLines
+              .map(
+                (l) => `<div class="serial-box">
+                  <p class="label-small serial-box__title">${esc(l.productName)}: ${l.pendingQuantity} IMEI / Series</p>
+                  <div class="serial-box__grid serial-box__grid--inputs">
+                    ${entered[l.id]
+                      .map(
+                        (_, i) => `<div class="serial-box__unit">
+                          <label class="label-small detail-label">Unidad ${i + 1}</label>
+                          <input type="text" data-line="${esc(l.id)}" data-i="${i}" maxlength="100" placeholder="IMEI o Serie" class="body-small serial-box__input" />
+                        </div>`
+                      )
+                      .join('')}
+                  </div>
+                </div>`
+              )
+              .join('')}
+          </div>
+          <span data-serial-error class="label-small field__hint"></span>
+        </div>
+        <div class="modal-footer modal-footer--soft">
+          <button type="button" data-close class="btn btn--muted">Cancelar</button>
+          <button type="button" data-confirm-receive disabled class="btn btn--success">${ui.icon('box-open')} Registrar recepción</button>
+        </div>
+      </div>`, { layer: 'top' });
+    const confirm = m.el.querySelector('[data-confirm-receive]');
+    const errorBox = m.el.querySelector('[data-serial-error]');
+    function check() {
+      const all = [];
+      serialLines.forEach((l) => entered[l.id].forEach((v) => all.push(v.trim().toLowerCase())));
+      const filled = all.every(Boolean);
+      const nonEmpty = all.filter(Boolean);
+      const dup = new Set(nonEmpty).size !== nonEmpty.length;
+      errorBox.textContent = dup ? 'Hay IMEI repetidos.' : '';
+      confirm.disabled = !filled || dup;
+    }
+    m.el.addEventListener('input', (e) => {
+      const lineId = e.target.dataset.line;
+      if (lineId === undefined) return;
+      entered[lineId][Number(e.target.dataset.i)] = e.target.value;
+      check();
+    });
+    confirm.addEventListener('click', () =>
+      ui.busy(confirm, async () => {
+        try {
+          // Se reciben las piezas pendientes de todos los renglones; los no serializados van sin IMEI.
+          const lines = (order.lines || [])
+            .filter((l) => l.pendingQuantity > 0)
+            .map((l) => ({
+              purchaseOrderLineId: l.id,
+              receivedQuantity: l.pendingQuantity,
+              serials: l.isSerialized ? entered[l.id].map((v) => v.trim()) : undefined,
+            }));
+          await Hook.post(Hook.org('goods-receipts'), { purchaseOrderId: order.id, lines, notes: null });
+          m.close();
+          detailModal.close();
+          ui.toast('Recepción registrada');
+          load();
+        } catch (err) {
+          ui.error(err, 'No se pudo registrar la recepción.');
+        }
+      })
+    );
   }
 
   function exportCSV() {

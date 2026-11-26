@@ -118,8 +118,11 @@
         <div class="org-detail__group">
           <p class="label-normal">Contacto:</p>
           <div class="org-detail__line">${ui.icon('envelope', 'org-detail__icon')} ${esc(o.email)}</div>
-          <div class="org-detail__line" title="Teléfono">${ui.icon('phone', 'org-detail__icon')} ${esc(o.phone1 || 'Teléfono no registrado')}</div>
-          <div class="org-detail__line" title="Celular">${ui.icon('mobile-screen', 'org-detail__icon')} ${esc(o.phone2 || 'Celular no registrado')}</div>
+          ${
+            ui.phonesOf(o)
+              .map((p) => `<div class="org-detail__line" title="${esc(ui.phoneKindLabel(p.kind))}">${ui.icon(p.kind === 'fijo' ? 'phone' : 'mobile-screen', 'org-detail__icon')} ${esc(p.number)} <span class="label-small phone-list__kind">(${esc(ui.phoneKindLabel(p.kind))}${p.isPrimary ? ', principal' : ''})</span></div>`)
+              .join('') || `<div class="org-detail__line" title="Teléfono">${ui.icon('phone', 'org-detail__icon')} Teléfono no registrado</div>`
+          }
           <div class="org-detail__line">${ui.icon('link', 'org-detail__icon')} ${esc(o.website || 'No registrado')}</div>
         </div>
         <div class="org-detail__group">
@@ -200,8 +203,7 @@
          <section><div class="form-grid form-grid--sm">
            ${input('Nombre *', 'name', o.name)}
            ${input('Email *', 'email', o.email, 'email')}
-           ${input('Teléfono', 'phone1', o.phone1, 'text', 'data-phone placeholder="662 123 4567"')}
-           ${input('Celular', 'phone2', o.phone2, 'text', 'data-phone placeholder="662 123 4567"')}
+           <div class="span-all field"><label class="label-normal field__label">Teléfonos</label><div data-phones></div></div>
            <div class="span-all">${input('Página Web', 'website', o.website, 'text', 'placeholder="https://www.ejemplo.com"')}</div>
          </div></section>
          <div class="org-modal__divider"></div>
@@ -217,29 +219,33 @@
     const form = m.el.querySelector('form');
     const save = m.el.querySelector('[data-save]');
     ui.phoneInputs(form);
+    const phoneList = ui.phoneList(m.el.querySelector('[data-phones]'), ui.phonesOf(o));
+    let formOk = false;
     ui.addressAutofill(form);
     const v = ui.validator(
       form,
       {
         name: [ui.rules.required],
         email: [ui.rules.required, ui.rules.email],
-        phone1: [ui.rules.phone],
-        phone2: [ui.rules.phone],
         postCode: [ui.rules.pattern(/^[0-9]+$/)],
       },
-      (ok) => (save.disabled = !ok)
+      (ok) => {
+        formOk = ok;
+        save.disabled = !ok || !!phoneList.error();
+      }
     );
     v.validate();
+    // Cambios en la lista de teléfonos (el validador solo conoce los campos con nombre).
+    form.addEventListener('input', () => (save.disabled = !formOk || !!phoneList.error()));
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      if (!v.validate(true)) return;
+      if (!v.validate(true) || phoneList.error()) return;
       ui.busy(save, async () => {
         const f = ui.formValues(form);
         const payload = {
           name: f.name.trim(),
           email: f.email.trim(),
-          phone1: (f.phone1 || '').trim(),
-          phone2: (f.phone2 || '').trim(),
+          phones: phoneList.get(),
           website: (f.website || '').trim(),
           address: {
             address: (f.address || '').trim(),

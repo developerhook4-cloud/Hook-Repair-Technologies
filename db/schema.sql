@@ -168,6 +168,23 @@ CREATE TABLE IF NOT EXISTS suppliers (
   KEY idx_suppliers_org (organization_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Teléfonos múltiples (KAN-101) de organizaciones, clientes y proveedores.
+-- Para owner_type 'organization', owner_id = organization_id. Las columnas
+-- phone1 / phone2 de cada tabla siguen existiendo y reflejan los dos primeros.
+CREATE TABLE IF NOT EXISTS phones (
+  id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+  organization_id BIGINT       NOT NULL,
+  owner_type      ENUM('organization','customer','supplier') NOT NULL,
+  owner_id        BIGINT       NOT NULL,
+  kind            ENUM('fijo','celular','whatsapp') NOT NULL DEFAULT 'fijo',
+  number          VARCHAR(20)  NOT NULL,
+  is_primary      TINYINT(1)   NOT NULL DEFAULT 0,
+  position        INT          NOT NULL DEFAULT 0,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  deleted_at      DATETIME     NULL,
+  KEY idx_phones_owner (owner_type, owner_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ── Inventario ──────────────────────────────────────────────────────
 
 -- upc: '4' + (1 si es serializado, 0 si no) + el id con 10 dígitos.
