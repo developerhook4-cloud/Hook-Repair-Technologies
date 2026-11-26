@@ -322,21 +322,20 @@ func TestSerializados_StockCeroNoGuardaIMEI(t *testing.T) {
 	}
 }
 
-func TestSerializados_MovimientoManualRechazado(t *testing.T) {
+// Los ajustes siguen prohibidos en serializados (no hay IMEI que sumar o quitar);
+// las entradas y salidas ahora llevan sus IMEI (KAN-137), ver abajo.
+func TestSerializados_AjusteRechazadoYSinIMEIRechazado(t *testing.T) {
 	s := newShop(t)
 	a := s.app
 	imei := "IMEI" + unique()
 	pid := s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 3, "serialNumbers": []string{imei + "a", imei + "b", imei + "c"}})
 	for _, mv := range []map[string]any{
+		{"productId": pid, "type": "Adjustment", "quantity": -1},
 		{"productId": pid, "type": "Entry", "quantity": 5},
 		{"productId": pid, "type": "Exit", "quantity": 1},
-		{"productId": pid, "type": "Adjustment", "quantity": -1},
 	} {
 		r := a.do(s.Admin, "POST", s.path("/inventory/movements"), mv)
-		expect(t, "movimiento manual sobre serializado "+mv["type"].(string), r, http.StatusBadRequest)
-		if !strings.Contains(r.String(), "serializados") {
-			t.Errorf("el mensaje debería explicar la regla: %s", r)
-		}
+		expect(t, "movimiento inválido sobre serializado "+mv["type"].(string), r, http.StatusBadRequest)
 	}
 	if p := s.getProduct(t, pid); p.InStock != 3 || len(p.SerialNumbers) != 3 {
 		t.Errorf("el stock no debió cambiar: %+v", p)
@@ -345,6 +344,101 @@ func TestSerializados_MovimientoManualRechazado(t *testing.T) {
 	plain := s.newProduct(t, nil)
 	expect(t, "movimiento sobre producto normal", a.do(s.Admin, "POST", s.path("/inventory/movements"),
 		map[string]any{"productId": plain, "type": "Entry", "quantity": 5}), http.StatusCreated)
+	expect(t, "IMEI en producto normal", a.do(s.Admin, "POST", s.path("/inventory/movements"),
+		map[string]any{"productId": plain, "type": "Entry", "quantity": 1, "serials": []string{imei + "x"}}), http.StatusBadRequest)
+}
+
+// ── KAN-137: IMEI en recepciones y movimientos ─────────────────────────
+
+// serialStock revisa que el stock sea igual al número de IMEI disponibles.
+func (s *shop) serialStock(t *testing.T, pid string, want int) models.Product {
+	t.Helper()
+	p := s.getProduct(t, pid)
+	if p.InStock != want || len(p.SerialNumbers) != want {
+		t.Errorf("stock %d, IMEI %d; se esperaban %d: %+v", p.InStock, len(p.SerialNumbers), want, p)
+	}
+	return p
+}
+
+func (s *shop) newSerialPO(t *testing.T, pid string, qty int) (po string, lineID string) {
+	t.Helper()
+	sup := s.create(t, "/suppliers", map[string]any{"name": "Prov " + unique(), "phone1": "6621234567", "email": "p" + unique() + "@ejemplo.com"})
+	po = s.create(t, "/purchase-orders", map[string]any{"supplierId": sup, "products": []map[string]any{{"productId": pid, "quantity": qty}}})
+	r := s.app.do(s.Admin, "GET", s.path("/purchase-orders/"+po), nil)
+	expect(t, "GET orden", r, http.StatusOK)
+	var out struct {
+		Lines []struct{ ID string } `json:"lines"`
+	}
+	r.decode(t, &out)
+	if len(out.Lines) != 1 {
+		t.Fatalf("la orden debería tener un renglón: %s", r)
+	}
+	return po, out.Lines[0].ID
+}
+
+func TestSerializados_RecepcionConIMEI(t *testing.T) {
+	s := newShop(t)
+	a := s.app
+	imei := "IMEI" + unique()
+	pid := s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 1, "serialNumbers": []string{imei + "0"}})
+	po, line := s.newSerialPO(t, pid, 3)
+	receive := func(qty int, serials []string) resp {
+		return a.do(s.Admin, "POST", s.path("/goods-receipts"), map[string]any{"purchaseOrderId": po,
+			"lines": []map[string]any{{"purchaseOrderLineId": line, "receivedQuantity": qty, "serials": serials}}})
+	}
+
+	expect(t, "lines null con serializado pendiente", a.do(s.Admin, "POST", s.path("/goods-receipts"), map[string]any{"purchaseOrderId": po}), http.StatusBadRequest)
+	expect(t, "faltan IMEI", receive(2, []string{imei + "1"}), http.StatusBadRequest)
+	expect(t, "sobran IMEI", receive(1, []string{imei + "1", imei + "2"}), http.StatusBadRequest)
+	expect(t, "IMEI vacío", receive(2, []string{imei + "1", "   "}), http.StatusBadRequest)
+	expect(t, "IMEI repetido en la solicitud", receive(2, []string{imei + "1", imei + "1"}), http.StatusBadRequest)
+	expect(t, "IMEI ya registrado", receive(2, []string{imei + "1", imei + "0"}), http.StatusConflict)
+	s.serialStock(t, pid, 1) // nada de lo rechazado dejó rastro
+
+	expect(t, "recepción parcial con IMEI", receive(2, []string{imei + "1", imei + "2"}), http.StatusCreated)
+	s.serialStock(t, pid, 3)
+	expect(t, "resto con IMEI", receive(1, []string{imei + "3"}), http.StatusCreated)
+	s.serialStock(t, pid, 4)
+}
+
+func TestSerializados_MovimientosConIMEI(t *testing.T) {
+	s := newShop(t)
+	other := newShop(t)
+	a := s.app
+	imei := "IMEI" + unique()
+	pid := s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 1, "serialNumbers": []string{imei + "0"}})
+	sibling := s.newProduct(t, map[string]any{"isSerialized": true, "inStock": 1, "serialNumbers": []string{imei + "s"}})
+	other.newProduct(t, map[string]any{"isSerialized": true, "inStock": 1, "serialNumbers": []string{imei + "f"}})
+	mv := func(typ string, qty int, serials []string) resp {
+		return a.do(s.Admin, "POST", s.path("/inventory/movements"), map[string]any{"productId": pid, "type": typ, "quantity": qty, "serials": serials})
+	}
+
+	expect(t, "entrada sin IMEI", mv("Entry", 2, nil), http.StatusBadRequest)
+	expect(t, "entrada con IMEI de menos", mv("Entry", 2, []string{imei + "1"}), http.StatusBadRequest)
+	expect(t, "entrada con IMEI vacío", mv("Entry", 1, []string{" "}), http.StatusBadRequest)
+	expect(t, "entrada con IMEI ya registrado", mv("Entry", 1, []string{imei + "s"}), http.StatusConflict)
+	s.serialStock(t, pid, 1)
+	expect(t, "entrada", mv("Entry", 2, []string{imei + "1", imei + "2"}), http.StatusCreated)
+	s.serialStock(t, pid, 3)
+
+	expect(t, "salida sin IMEI", mv("Exit", 1, nil), http.StatusBadRequest)
+	expect(t, "salida con IMEI desconocido", mv("Exit", 1, []string{imei + "zzz"}), http.StatusBadRequest)
+	expect(t, "salida con IMEI de otra organización", mv("Exit", 1, []string{imei + "f"}), http.StatusBadRequest)
+	expect(t, "salida con IMEI de otro producto", mv("Exit", 1, []string{imei + "s"}), http.StatusBadRequest)
+	expect(t, "salida con IMEI de más", mv("Exit", 1, []string{imei + "1", imei + "2"}), http.StatusBadRequest)
+	expect(t, "salida con IMEI repetido", mv("Exit", 2, []string{imei + "1", imei + "1"}), http.StatusBadRequest)
+	s.serialStock(t, pid, 3)
+	s.serialStock(t, sibling, 1)
+
+	expect(t, "salida", mv("Exit", 2, []string{imei + "1", imei + "0"}), http.StatusCreated)
+	p := s.serialStock(t, pid, 1)
+	if p.SerialNumbers[0] != imei+"2" {
+		t.Errorf("debió quedar el IMEI %s2: %v", imei, p.SerialNumbers)
+	}
+	expect(t, "salida de un IMEI ya dado de baja", mv("Exit", 1, []string{imei + "1"}), http.StatusBadRequest)
+	// El IMEI dado de baja queda libre y se puede volver a dar de entrada.
+	expect(t, "reingreso del IMEI liberado", mv("Entry", 1, []string{imei + "1"}), http.StatusCreated)
+	s.serialStock(t, pid, 2)
 }
 
 func TestSerializados_BorrarProductoLiberaIMEI(t *testing.T) {
