@@ -57,6 +57,17 @@
 .field__label-row { display: flex; align-items: center; gap: 8px; min-height: 26px; }
 .field__error { color: #b3261e; }
 .field__hint { color: var(--muted); }
+
+/* Lista de teléfonos (ui.phoneList, KAN-101) */
+.phone-list { display: flex; flex-direction: column; gap: 8px; }
+.phone-list__row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.phone-list__kind-select { flex: 0 0 128px; width: 128px; }
+.phone-list__number { flex: 1 1 140px; min-width: 0; }
+.phone-list__primary { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); white-space: nowrap; }
+.phone-list__remove[disabled] { opacity: 0.4; pointer-events: none; }
+.phone-list__add { align-self: flex-start; margin-left: 0; }
+.phone-list__add[disabled] { opacity: 0.5; pointer-events: none; }
+.phone-list__kind { color: var(--muted); }
 .req { color: var(--accent); }
 
 .input, .textarea {

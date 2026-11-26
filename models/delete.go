@@ -53,6 +53,14 @@ func DeleteCatalogRecord(kind, orgID, id string) error {
 			_, err = tx.Exec(`UPDATE product_serials SET deleted_at = UTC_TIMESTAMP()
 				WHERE organization_id = ? AND product_id = ? AND deleted_at IS NULL`, orgID, id)
 		}
+		// Los teléfonos de un cliente o proveedor eliminado se van con él (KAN-101).
+		if err == nil && (kind == "clients" || kind == "suppliers") {
+			owner := ownerCustomer
+			if kind == "suppliers" {
+				owner = ownerSupplier
+			}
+			err = deletePhones(tx, owner, id)
+		}
 		return err
 	})
 }
