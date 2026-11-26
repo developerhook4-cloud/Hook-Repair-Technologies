@@ -844,6 +844,130 @@
     password: [(v) => !v || !ui.passwordError(v), 'Mínimo 8 caracteres, con al menos una letra y un número.'],
   };
 
+  // ── Autollenado de dirección por código postal (KAN-102) ────────────
+
+  /**
+   * Al escribir un código postal de 5 dígitos consulta GET /api/postal-codes/:cp
+   * y llena estado, ciudad y país (siguen editables); además ofrece un select
+   * con las colonias del CP más "Otra…" para escribirla a mano.
+   *  scope: formulario o contenedor con inputs [name=postCode|state|city|country|neighborhood]
+   *  opts.names:    nombres de los campos si son distintos { postCode, state, city, country, neighborhood }
+   *  opts.setState: (estado) => void, para cuando el estado es un dropdown y no un input
+   * Si el CP no existe avisa sin bloquear; si falla la red no hace nada.
+   * Devuelve { destroy() }.
+   */
+  ui.addressAutofill = function (scope, opts = {}) {
+    const names = Object.assign({ postCode: 'postCode', state: 'state', city: 'city', country: 'country', neighborhood: 'neighborhood' }, opts.names);
+    const field = (k) => scope.querySelector(`[name="${names[k]}"]`);
+    const cpInput = field('postCode');
+    if (!cpInput) return { destroy() {} };
+
+    let seq = 0; // descarta respuestas viejas si el usuario sigue escribiendo
+    let select = null;
+    let notice = null;
+
+    const fire = (el) => el.dispatchEvent(new Event('input', { bubbles: true }));
+    const setInput = (k, val) => {
+      const el = field(k);
+      if (!el || !val) return;
+      el.value = val;
+      fire(el);
+    };
+
+    function clearNotice() {
+      if (notice) notice.remove();
+      notice = null;
+    }
+    function showNotice(msg) {
+      clearNotice();
+      notice = document.createElement('small');
+      notice.className = 'label-small field__hint';
+      notice.setAttribute('role', 'status');
+      notice.textContent = msg;
+      cpInput.insertAdjacentElement('afterend', notice);
+    }
+    // Quita el select de colonias y vuelve a mostrar el input de texto.
+    function clearColonias() {
+      const nb = field('neighborhood');
+      if (select) select.remove();
+      select = null;
+      if (nb) nb.hidden = false;
+    }
+    function showColonias(colonias) {
+      const nb = field('neighborhood');
+      if (!nb) return;
+      clearColonias();
+      const otra = '__otra__';
+      select = document.createElement('select');
+      select.className = nb.className;
+      select.setAttribute('aria-label', 'Colonia');
+      const opt = (value, text) => `<option value="${esc(value)}">${esc(text)}</option>`;
+      select.innerHTML =
+        opt('', 'Selecciona la colonia') + colonias.map((c) => opt(c.nombre, c.nombre)).join('') + opt(otra, 'Otra…');
+      const actual = nb.value.trim();
+      if (actual && colonias.some((c) => c.nombre === actual)) select.value = actual;
+      else if (actual) {
+        select.value = otra;
+      }
+      nb.insertAdjacentElement('beforebegin', select);
+      const sync = () => {
+        if (select.value === otra) {
+          nb.hidden = false;
+          if (colonias.some((c) => c.nombre === nb.value.trim())) nb.value = '';
+          nb.focus();
+        } else {
+          nb.hidden = true;
+          nb.value = select.value;
+        }
+        fire(nb);
+      };
+      select.addEventListener('change', sync);
+      nb.hidden = select.value !== otra;
+    }
+
+    async function lookup(cp) {
+      const mine = ++seq;
+      let data;
+      try {
+        data = await Hook.get('/api/postal-codes/' + cp);
+      } catch (err) {
+        if (mine !== seq) return;
+        // 404: CP que no existe → aviso; cualquier otro error (red, 503…) se ignora.
+        if (err && err.status === 404) {
+          clearColonias();
+          showNotice('Código postal no encontrado, captura la dirección manualmente');
+        }
+        return;
+      }
+      if (mine !== seq || !data) return;
+      clearNotice();
+      if (opts.setState && data.estado) opts.setState(data.estado);
+      else setInput('state', data.estado);
+      setInput('city', data.ciudad || data.municipio);
+      setInput('country', data.pais);
+      if (data.colonias && data.colonias.length) showColonias(data.colonias);
+      else clearColonias();
+    }
+
+    function onInput() {
+      const cp = cpInput.value.trim();
+      if (/^\d{5}$/.test(cp)) lookup(cp);
+      else {
+        seq++;
+        clearNotice();
+        clearColonias();
+      }
+    }
+    cpInput.addEventListener('input', onInput);
+    return {
+      destroy() {
+        cpInput.removeEventListener('input', onInput);
+        clearNotice();
+        clearColonias();
+      },
+    };
+  };
+
   // ── Alta rápida desde otro formulario ───────────────────────────────
 
   /**

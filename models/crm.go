@@ -60,11 +60,13 @@ func customerTypeFromDB(s string) CustomerType {
 
 // NullableAddress — dirección que puede venir en null.
 type NullableAddress struct {
-	Address  *string `json:"address"`
-	City     *string `json:"city"`
-	State    *string `json:"state"`
-	PostCode *string `json:"postCode"`
-	Country  *string `json:"country"`
+	Address *string `json:"address"`
+	// Neighborhood — colonia (KAN-102).
+	Neighborhood *string `json:"neighborhood"`
+	City         *string `json:"city"`
+	State        *string `json:"state"`
+	PostCode     *string `json:"postCode"`
+	Country      *string `json:"country"`
 }
 
 // Client — tabla customers.
@@ -156,7 +158,7 @@ func (r *ClientRequest) validate() error {
 		r.Rfc = &rfc
 	}
 	if a := r.Address; a != nil {
-		for _, v := range []*string{a.Address, a.City, a.State, a.PostCode, a.Country} {
+		for _, v := range []*string{a.Address, a.Neighborhood, a.City, a.State, a.PostCode, a.Country} {
 			if runeLen(strVal(v)) > 500 {
 				return Invalid("Los campos de la dirección no pueden pasar de 500 caracteres.")
 			}
@@ -187,15 +189,15 @@ func addrField(a *NullableAddress, pick func(*NullableAddress) *string) any {
 
 const clientSelect = `
 	SELECT id, name, customer_type, phone1, phone2, legal_name, email,
-	       address, city, state, post_code, country,
+	       address, neighborhood, city, state, post_code, country,
 	       titular_name, authorized_people, rfc, tax_regime, expense_type, active
 	FROM customers`
 
 func scanClient(sc interface{ Scan(...any) error }) (*Client, error) {
 	var c Client
 	var ctype string
-	var p2, legal, email, a, ci, st, pc, co, titular, people, rfc, tax, exp sql.NullString
-	if err := sc.Scan(&c.ID, &c.Name, &ctype, &c.Phone1, &p2, &legal, &email, &a, &ci, &st, &pc, &co,
+	var p2, legal, email, a, nb, ci, st, pc, co, titular, people, rfc, tax, exp sql.NullString
+	if err := sc.Scan(&c.ID, &c.Name, &ctype, &c.Phone1, &p2, &legal, &email, &a, &nb, &ci, &st, &pc, &co,
 		&titular, &people, &rfc, &tax, &exp, &c.Active); err != nil {
 		return nil, err
 	}
@@ -205,8 +207,8 @@ func scanClient(sc interface{ Scan(...any) error }) (*Client, error) {
 	if people.Valid {
 		c.AuthorizedPeople = jsonList(people)
 	}
-	if a.Valid || ci.Valid || st.Valid || pc.Valid || co.Valid {
-		c.Address = &NullableAddress{nullStr(a), nullStr(ci), nullStr(st), nullStr(pc), nullStr(co)}
+	if a.Valid || nb.Valid || ci.Valid || st.Valid || pc.Valid || co.Valid {
+		c.Address = &NullableAddress{Address: nullStr(a), Neighborhood: nullStr(nb), City: nullStr(ci), State: nullStr(st), PostCode: nullStr(pc), Country: nullStr(co)}
 	}
 	return &c, nil
 }
@@ -266,6 +268,7 @@ func (r *ClientRequest) args() []any {
 	return []any{
 		r.CustomerType.dbValue(), strVal(r.Name), strVal(r.Phone1), trimOrNil(r.Phone2), trimOrNil(r.LegalName), trimOrNil(r.Email),
 		addrField(a, func(x *NullableAddress) *string { return x.Address }),
+		addrField(a, func(x *NullableAddress) *string { return x.Neighborhood }),
 		addrField(a, func(x *NullableAddress) *string { return x.City }),
 		addrField(a, func(x *NullableAddress) *string { return x.State }),
 		addrField(a, func(x *NullableAddress) *string { return x.PostCode }),
@@ -285,9 +288,9 @@ func CreateClient(orgID string, r ClientRequest) (*Client, error) {
 		var err error
 		id, err = insert(tx, `INSERT INTO customers
 			(organization_id, customer_type, name, phone1, phone2, legal_name, email,
-			 address, city, state, post_code, country,
+			 address, neighborhood, city, state, post_code, country,
 			 titular_name, authorized_people, rfc, tax_regime, expense_type, active)
-			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`, args...)
+			VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1)`, args...)
 		if err != nil {
 			return err
 		}
@@ -308,7 +311,7 @@ func UpdateClient(orgID, id string, r ClientRequest) (*Client, error) {
 	err := withTx(func(tx *sql.Tx) error {
 		res, err := tx.Exec(`UPDATE customers SET
 			customer_type=?, name=?, phone1=?, phone2=?, legal_name=?, email=?,
-			address=?, city=?, state=?, post_code=?, country=?,
+			address=?, neighborhood=?, city=?, state=?, post_code=?, country=?,
 			titular_name=?, authorized_people=?, rfc=?, tax_regime=?, expense_type=?
 		WHERE id=? AND organization_id=? AND deleted_at IS NULL`, args...)
 		if err != nil {

@@ -47,6 +47,15 @@ func migrate() {
 		mustExec(`UPDATE product_serials s JOIN products p ON p.id = s.product_id
 			SET s.deleted_at = p.deleted_at WHERE p.deleted_at IS NOT NULL`)
 	}
+	// Colonia en la dirección (KAN-102): organizaciones y clientes.
+	for _, t := range []struct{ table, typ string }{
+		{"organizations", "VARCHAR(200) NOT NULL DEFAULT ''"},
+		{"customers", "VARCHAR(500) NULL"},
+	} {
+		if !columnExists(t.table, "neighborhood") {
+			mustExec("ALTER TABLE " + t.table + " ADD COLUMN neighborhood " + t.typ + " AFTER address")
+		}
+	}
 	// UNIQUE que ignora lo eliminado (permite volver a usar el nombre / email / IMEI).
 	live := []struct{ table, col, src, typ, index, cols string }{
 		{"users", "email_live", "email", "VARCHAR(255)", "uq_users_email", "email_live"},

@@ -10,7 +10,14 @@
     { value: '0', label: 'Cliente' },
     { value: '1', label: 'Distribuidor' },
   ];
-  const STATES = ['Sonora', 'Sinaloa', 'Baja California', 'Chihuahua', 'Nuevo León', 'Jalisco', 'Ciudad de México'];
+  // Los 32 estados con el nombre oficial del catálogo SEPOMEX (así el autollenado por código postal los selecciona).
+  const STATES = [
+    'Aguascalientes', 'Baja California', 'Baja California Sur', 'Campeche', 'Chiapas', 'Chihuahua',
+    'Ciudad de México', 'Coahuila de Zaragoza', 'Colima', 'Durango', 'Guanajuato', 'Guerrero', 'Hidalgo',
+    'Jalisco', 'México', 'Michoacán de Ocampo', 'Morelos', 'Nayarit', 'Nuevo León', 'Oaxaca', 'Puebla',
+    'Querétaro', 'Quintana Roo', 'San Luis Potosí', 'Sinaloa', 'Sonora', 'Tabasco', 'Tamaulipas', 'Tlaxcala',
+    'Veracruz de Ignacio de la Llave', 'Yucatán', 'Zacatecas',
+  ];
   // Catálogos del SAT (CFDI 4.0)
   const TAX_REGIMES = [
     '601 - General de Ley Personas Morales',
@@ -150,6 +157,7 @@
                 <div class="form-grid">
                   ${input('Dirección', 'address', addr.address, 'Av Nombre 100', { small: true })}
                   ${input('Código Postal', 'postCode', addr.postCode, '12345', { small: true })}
+                  ${input('Colonia', 'neighborhood', addr.neighborhood, 'Nombre de la colonia', { small: true })}
                   ${input('Ciudad', 'city', addr.city, 'Elegir ciudad', { small: true })}
                   ${dd('Estado', 'ddState', true)}
                   ${input('País', 'country', addr.country, 'México', { small: true })}
@@ -188,7 +196,7 @@
     });
     ui.dropdown(m.el.querySelector('#ddTax'), { items: toItems(TAX_REGIMES, cur.taxRegime), value: cur.taxRegime, placeholder: 'Seleccionar régimen fiscal', up: true, onChange: (v) => ((cur.taxRegime = v), validate()) });
     ui.dropdown(m.el.querySelector('#ddExpense'), { items: toItems(EXPENSE_TYPES, cur.expenseType), value: cur.expenseType, placeholder: 'Seleccionar uso de CFDI', up: true, onChange: (v) => ((cur.expenseType = v), validate()) });
-    ui.dropdown(m.el.querySelector('#ddState'), { items: toItems(STATES), value: cur.state, placeholder: 'Elegir estado', up: true, onChange: (v) => (cur.state = v) });
+    const ddState = ui.dropdown(m.el.querySelector('#ddState'), { items: toItems(STATES), value: cur.state, placeholder: 'Elegir estado', up: true, onChange: (v) => (cur.state = v) });
     if (editing) {
       ui.dropdown(m.el.querySelector('#ddStatus'), {
         items: [
@@ -203,6 +211,14 @@
     applyType();
     ui.phoneInputs(form);
     const phoneList = ui.phoneList(m.el.querySelector('[data-phones]'), ui.phonesOf(c), { required: true });
+    // Código postal → estado, ciudad, país y colonias (KAN-102). El estado es un dropdown.
+    ui.addressAutofill(form, {
+      setState: (estado) => {
+        cur.state = estado;
+        ddState.setItems(toItems(STATES, estado));
+        ddState.setValue(estado);
+      },
+    });
 
     // Si "Requiere facturar" está marcado, RFC, régimen y uso de CFDI son obligatorios.
     const invoiceError = m.el.querySelector('[data-invoice-error]');
@@ -246,6 +262,7 @@
           email: f.email.trim() || null,
           address: {
             address: f.address.trim() || null,
+            neighborhood: f.neighborhood.trim() || null,
             city: f.city.trim() || null,
             state: cur.state || null,
             postCode: f.postCode.trim() || null,

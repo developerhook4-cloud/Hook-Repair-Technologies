@@ -24,12 +24,13 @@
         <h2 class="heading-5 org-form__title">Ubicación</h2>
         <div class="org-form__grid">
           <div class="org-form__full">
-            {{template "input" dict "Label" "Dirección" "Name" "address" "Placeholder" "Ingresa la calle, número y colonia"}}
+            {{template "input" dict "Label" "Dirección" "Name" "address" "Placeholder" "Ingresa la calle y el número"}}
           </div>
+          {{template "input" dict "Label" "Código Postal" "Name" "postCode" "Placeholder" "Ej. 00000"}}
+          {{template "input" dict "Label" "Colonia" "Name" "neighborhood" "Placeholder" "Ingresa la colonia"}}
           {{template "input" dict "Label" "Ciudad" "Name" "city" "Placeholder" "Ingresa la ciudad"}}
           {{template "input" dict "Label" "Estado" "Name" "state" "Placeholder" "Ingresa el estado o provincia"}}
           {{template "input" dict "Label" "País" "Name" "country" "Placeholder" "Ingresa el país"}}
-          {{template "input" dict "Label" "Código Postal" "Name" "postCode" "Placeholder" "Ej. 00000"}}
         </div>
       </section>
     </div>

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   phone1     VARCHAR(30)  NOT NULL DEFAULT '',
   phone2     VARCHAR(30)  NOT NULL DEFAULT '',
   address    VARCHAR(300) NOT NULL DEFAULT '',
+  neighborhood VARCHAR(200) NOT NULL DEFAULT '',
   city       VARCHAR(100) NOT NULL DEFAULT '',
   state      VARCHAR(100) NOT NULL DEFAULT '',
   post_code  VARCHAR(20)  NOT NULL DEFAULT '',
@@ -138,6 +139,7 @@ CREATE TABLE IF NOT EXISTS customers (
   legal_name        VARCHAR(200) NULL,
   email             VARCHAR(254) NULL,
   address           VARCHAR(500) NULL,
+  neighborhood      VARCHAR(500) NULL,
   city              VARCHAR(500) NULL,
   state             VARCHAR(500) NULL,
   post_code         VARCHAR(500) NULL,
@@ -303,4 +305,18 @@ CREATE TABLE IF NOT EXISTS goods_receipt_lines (
   CONSTRAINT fk_goods_receipt_lines_receipt FOREIGN KEY (goods_receipt_id)       REFERENCES goods_receipts(id) ON DELETE CASCADE,
   CONSTRAINT fk_goods_receipt_lines_line    FOREIGN KEY (purchase_order_line_id) REFERENCES purchase_order_lines(id),
   CONSTRAINT fk_goods_receipt_lines_product FOREIGN KEY (product_id)             REFERENCES products(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Catálogo de códigos postales (KAN-102) ──────────────────────────
+-- Global (no por organización). Se llena al arrancar desde db/data/sepomex.tsv.gz
+-- (catálogo oficial SEPOMEX); ver db/postal.go.
+CREATE TABLE IF NOT EXISTS postal_codes (
+  id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+  cp                CHAR(5)      NOT NULL,
+  colonia           VARCHAR(200) NOT NULL,
+  tipo_asentamiento VARCHAR(60)  NOT NULL DEFAULT '',
+  municipio         VARCHAR(150) NOT NULL DEFAULT '',
+  ciudad            VARCHAR(150) NOT NULL DEFAULT '',
+  estado            VARCHAR(100) NOT NULL DEFAULT '',
+  INDEX idx_postal_codes_cp (cp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
