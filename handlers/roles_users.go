@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -145,6 +146,11 @@ func UpdateUser(c *gin.Context) {
 	if !bindJSON(c, &in) {
 		return
 	}
+	// Misma regla que el PATCH .../status: nadie se desactiva a sí mismo (KAN-145).
+	if in.Active != nil && !*in.Active && id == currentUser(c).ID {
+		problem(c, http.StatusBadRequest, "Invalid user", "No puedes desactivar tu propio usuario.")
+		return
+	}
 	u, err := models.UpdateUser(currentUser(c), orgOf(c), id, in)
 	if err != nil {
 		respondError(c, err, "user")
@@ -156,6 +162,11 @@ func UpdateUser(c *gin.Context) {
 			return
 		}
 		u, _ = models.GetUser(orgOf(c), id)
+	}
+	// Si el usuario cambió su PROPIA contraseña, la versión de sesiones subió: se
+	// vuelve a guardar la sesión actual para no sacarlo (KAN-143).
+	if strings.TrimSpace(in.Password) != "" {
+		keepSession(c, id)
 	}
 	c.JSON(http.StatusOK, u)
 }
@@ -195,5 +206,8 @@ func UpdateProfile(c *gin.Context) {
 		respondError(c, err, "profile")
 		return
 	}
+	// Cambiar la contraseña sube la versión de sesiones (las demás sesiones caen);
+	// esta se vuelve a guardar con la versión nueva para no sacar al usuario.
+	keepSession(c, currentUser(c).ID)
 	c.JSON(http.StatusOK, gin.H{"message": "Perfil actualizado exitosamente."})
 }

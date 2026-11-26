@@ -70,6 +70,15 @@ type PurchaseOrderRequest struct {
 // parcialmente los pone la recepción de mercancía.
 var manualStatuses = map[string]bool{POPending: true, POWaiting: true, POInProgress: true, POCanceled: true}
 
+// poTransitions — cambios de estado válidos a mano (KAN-145). Cancelada y
+// Recibida son estados finales: no tienen salida. Recibida parcialmente solo
+// avanza con otra recepción de mercancía, y En RMA no se elige ni se deja a mano.
+var poTransitions = map[string]map[string]bool{
+	POPending:    {POWaiting: true, POInProgress: true, POCanceled: true},
+	POWaiting:    {POPending: true, POInProgress: true, POCanceled: true},
+	POInProgress: {POPending: true, POWaiting: true, POCanceled: true},
+}
+
 var paymentStatuses = map[string]bool{PaymentUnpaid: true, PaymentPaid: true}
 
 // PurchaseOrderStatusRequest — cambiar estado y/o pago de una orden.
@@ -89,8 +98,16 @@ func UpdatePurchaseOrderStatus(orgID, id string, r PurchaseOrderStatusRequest) (
 		if !manualStatuses[r.Status] {
 			return nil, Invalid("Ese estado no se puede elegir a mano.")
 		}
-		if o.Status == POReceived || o.Status == POReceivedPartially {
+		switch o.Status {
+		case POCanceled:
+			return nil, Invalid("La orden ya está cancelada y no se puede cambiar.")
+		case POReceived:
+			return nil, Invalid("La orden ya está recibida y no se puede cambiar.")
+		case POReceivedPartially:
 			return nil, Invalid("La orden ya tiene mercancía recibida; su estado ya no se puede cambiar.")
+		}
+		if !poTransitions[o.Status][r.Status] {
+			return nil, Invalid("Ese cambio de estado no es válido para esta orden.")
 		}
 		status = r.Status
 	}

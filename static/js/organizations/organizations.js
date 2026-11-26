@@ -260,17 +260,30 @@
     });
   }
 
-  function openUserModal(user) {
+  async function openUserModal(user) {
     const org = selected;
     if (!org) return;
     const editing = !!user;
     let active = editing ? user.active : true;
+    // Roles de esa organización: solo los activos (más el actual del usuario, si ya no lo está).
+    let roles;
+    try {
+      roles = await Hook.get(`${endpoint}/${org.id}/roles`);
+    } catch (err) {
+      return ui.error(err, 'Error al cargar los roles');
+    }
+    const roleItems = roles.filter((r) => r.active || (editing && r.id === user.roleId));
+    // Por defecto "Administrador" (lo mismo que asigna el servidor si no llega rol).
+    let roleId = editing
+      ? user.roleId
+      : (roleItems.find((r) => String(r.name).toLowerCase() === 'administrador') || roleItems[0] || {}).id;
     const m = appModal(
       editing ? 'Editar empleado' : 'Nuevo empleado',
       `<form class="form-stack" novalidate>
-         <p class="org-modal__intro">${editing ? 'Editar un usuario' : 'Registrar un nuevo usuario'} de la organización <strong>${esc(org.name)}</strong>.${editing ? '' : ' Se crea con el rol Administrador.'}</p>
+         <p class="org-modal__intro">${editing ? 'Editar un usuario' : 'Registrar un nuevo usuario'} de la organización <strong>${esc(org.name)}</strong>.</p>
          ${input('Nombre completo', 'name', editing ? user.name : '')}
          ${input('Email', 'email', editing ? user.email : '', 'email')}
+         <div class="form-field"><label class="label-normal form-field__label">Rol</label><div id="ddUserRole"></div></div>
          ${input(editing ? 'Nueva contraseña (opcional)' : 'Contraseña', 'password', '', 'password', editing ? 'placeholder="Déjala vacía para no cambiarla"' : '')}
          <span class="label-small field__hint org-modal__hint">${ui.PASSWORD_HINT}</span>
          ${input('Confirmar contraseña', 'confirmPassword', '', 'password')}
@@ -284,6 +297,12 @@
     );
     const form = m.el.querySelector('form');
     const save = m.el.querySelector('[data-save]');
+    ui.dropdown(m.el.querySelector('#ddUserRole'), {
+      items: roleItems.map((r) => ({ value: r.id, label: r.name })),
+      value: roleId,
+      placeholder: 'Seleccionar rol',
+      onChange: (val) => (roleId = val),
+    });
     if (editing) {
       ui.dropdown(m.el.querySelector('#ddUserStatus'), {
         items: [
@@ -308,7 +327,7 @@
       if (!v.validate(true)) return;
       ui.busy(save, async () => {
         const f = ui.formValues(form);
-        const body = { name: f.name.trim(), email: f.email.trim(), password: f.password };
+        const body = { name: f.name.trim(), email: f.email.trim(), password: f.password, roleId };
         try {
           if (editing) await Hook.put(`${endpoint}/${org.id}/users/${user.id}`, Object.assign(body, { active }));
           else await Hook.post(`${endpoint}/${org.id}/users`, body);
