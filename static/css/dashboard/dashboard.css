@@ -1,11 +1,304 @@
-/* =========================================================
-   RESUMEN — templates/dashboard/dashboard.html
-   ========================================================= */
-.dashboard-empty { align-items: center; text-align: center; padding: 56px 24px; }
-.dashboard-empty__icon {
-  width: 64px; height: 64px; margin-bottom: 18px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--accent-soft); color: var(--accent); font-size: 24px;
+.dashboard {
+  display: grid;
+  gap: 24px;
 }
-.dashboard-empty__title { font-family: var(--font-heading); font-size: 20px; font-weight: 700; color: var(--ink); }
-.dashboard-empty__text { max-width: 440px; margin: 8px 0 22px; font-size: 14px; color: var(--muted); }
+
+.dashboard__loading,
+.dashboard__empty,
+.dashboard__empty-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+}
+
+.dashboard__loading {
+  min-height: 260px;
+  gap: 12px;
+}
+
+.dashboard__loading i {
+  color: var(--accent);
+  font-size: 28px;
+}
+
+.dashboard__empty {
+  min-height: 220px;
+  padding: 40px 24px;
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  background: var(--paper);
+}
+
+.dashboard__empty h2 {
+  margin: 14px 0 8px;
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 20px;
+}
+
+.dashboard__empty p {
+  max-width: 520px;
+  margin: 0;
+}
+
+.dashboard__empty-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 23px;
+}
+
+.dashboard__empty--error .dashboard__empty-icon {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.dashboard__kpis {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.dashboard__kpi {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 112px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard__kpi-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 19px;
+}
+
+.dashboard__kpi p {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dashboard__kpi strong {
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 29px;
+  line-height: 1;
+}
+
+.dashboard__kpi--warning .dashboard__kpi-icon {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.dashboard__kpi--info .dashboard__kpi-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.dashboard__kpi--success .dashboard__kpi-icon {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.dashboard__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 24px;
+}
+
+.dashboard__panel {
+  min-width: 0;
+  padding: 22px;
+}
+
+.dashboard__panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.dashboard__panel-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: 18px;
+}
+
+.dashboard__panel-head p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dashboard__link {
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dashboard__link:hover {
+  text-decoration: underline;
+}
+
+.dashboard__table-wrap {
+  overflow-x: auto;
+}
+
+.dashboard__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dashboard__table th,
+.dashboard__table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dashboard__table th {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.dashboard__table td:first-child {
+  max-width: 200px;
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+.dashboard__empty-panel {
+  min-height: 175px;
+  gap: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
+
+.dashboard__empty-panel i {
+  color: var(--success);
+  font-size: 22px;
+}
+
+.dashboard__empty-panel p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.dashboard__movements {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dashboard__movement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard__movement:last-child {
+  border-bottom: 0;
+}
+
+.dashboard__movement strong,
+.dashboard__movement span {
+  display: block;
+}
+
+.dashboard__movement strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.dashboard__movement > div:first-child span {
+  max-width: 210px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard__movement-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: right;
+}
+
+.dashboard__movement-type {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.dashboard__movement-type--entry {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.dashboard__movement-type--exit {
+  background: var(--error-soft);
+  color: var(--error);
+}
+
+.dashboard__movement-type--adjustment {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+@media (max-width: 900px) {
+  .dashboard__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .dashboard__kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard__movement {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard__movement-meta {
+    justify-items: start;
+    text-align: left;
+  }
+}
