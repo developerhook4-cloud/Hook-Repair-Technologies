@@ -196,22 +196,79 @@ func CreateOrganization(r SaveOrganizationRequest) (*Organization, error) {
 }
 
 // registerDefaultRoles crea los roles por defecto que la organización no tenga.
+// registerDefaultRoles crea los roles por defecto faltantes y agrega los
+// permisos predeterminados nuevos a esos roles cuando ya existen.
 func registerDefaultRoles(tx *sql.Tx, orgID string) error {
 	for _, dr := range DefaultRoles {
-		var exists bool
-		if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM roles WHERE organization_id = ? AND LOWER(name) = LOWER(?) AND deleted_at IS NULL)`,
-			orgID, dr.Name).Scan(&exists); err != nil {
-			return err
-		}
-		if exists {
+		var roleID string
+		var storedPermissions sql.NullString
+
+		err := tx.QueryRow(`
+			SELECT id, permissions
+			FROM roles
+			WHERE organization_id = ?
+			  AND LOWER(name) = LOWER(?)
+			  AND deleted_at IS NULL
+			LIMIT 1`,
+			orgID,
+			dr.Name,
+		).Scan(&roleID, &storedPermissions)
+
+		if err == sql.ErrNoRows {
+			if _, err := tx.Exec(
+				`INSERT INTO roles (organization_id, name, permissions, active)
+				 VALUES (?,?,?,1)`,
+				orgID,
+				dr.Name,
+				toJSON(dr.Permissions),
+			); err != nil {
+				return err
+			}
+
 			continue
 		}
-		if _, err := tx.Exec(`INSERT INTO roles (organization_id, name, permissions, active) VALUES (?,?,?,1)`,
-			orgID, dr.Name, toJSON(dr.Permissions)); err != nil {
+
+		if err != nil {
+			return err
+		}
+
+		currentPermissions := jsonList(storedPermissions)
+		mergedPermissions := mergeDefaultPermissions(
+			currentPermissions,
+			dr.Permissions,
+		)
+
+		if len(mergedPermissions) == len(currentPermissions) {
+			continue
+		}
+
+		if _, err := tx.Exec(
+			`UPDATE roles SET permissions = ?
+			 WHERE organization_id = ? AND id = ?`,
+			toJSON(mergedPermissions),
+			orgID,
+			roleID,
+		); err != nil {
 			return err
 		}
 	}
+
 	return nil
+}
+
+func mergeDefaultPermissions(
+	current []string,
+	defaults []string,
+) []string {
+	merged := append([]string{}, current...)
+
+	for _, permission := range defaults {
+		if !HasPermission(merged, permission) {
+			merged = append(merged, permission)
+		}
+	}
+
+	return merged
 }
 
 // EnsureDefaultRoles agrega a cada organización los roles por defecto que le
