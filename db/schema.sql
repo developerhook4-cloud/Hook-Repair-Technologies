@@ -320,3 +320,11 @@ CREATE TABLE IF NOT EXISTS postal_codes (
   estado            VARCHAR(100) NOT NULL DEFAULT '',
   INDEX idx_postal_codes_cp (cp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ── Migraciones de datos de una sola vez ───────────────────────────
+-- Marcadores de pasos que no deben repetirse en cada arranque
+-- (p. ej. permisos nuevos de roles por defecto, KAN-110; ver models/organizations.go).
+CREATE TABLE IF NOT EXISTS app_migrations (
+  name       VARCHAR(100) PRIMARY KEY,
+  applied_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

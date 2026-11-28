@@ -196,66 +196,98 @@ func CreateOrganization(r SaveOrganizationRequest) (*Organization, error) {
 }
 
 // registerDefaultRoles crea los roles por defecto que la organización no tenga.
-// registerDefaultRoles crea los roles por defecto faltantes y agrega los
-// permisos predeterminados nuevos a esos roles cuando ya existen.
+// No toca los roles que ya existen: los permisos que el administrador quite o
+// agregue se respetan en cada arranque. Los permisos nuevos de un rol por
+// defecto se agregan una sola vez con backfillDefaultPermissions.
 func registerDefaultRoles(tx *sql.Tx, orgID string) error {
 	for _, dr := range DefaultRoles {
-		var roleID string
-		var storedPermissions sql.NullString
-
-		err := tx.QueryRow(`
-			SELECT id, permissions
-			FROM roles
-			WHERE organization_id = ?
-			  AND LOWER(name) = LOWER(?)
-			  AND deleted_at IS NULL
-			LIMIT 1`,
-			orgID,
-			dr.Name,
-		).Scan(&roleID, &storedPermissions)
-
-		if err == sql.ErrNoRows {
-			if _, err := tx.Exec(
-				`INSERT INTO roles (organization_id, name, permissions, active)
-				 VALUES (?,?,?,1)`,
-				orgID,
-				dr.Name,
-				toJSON(dr.Permissions),
-			); err != nil {
-				return err
-			}
-
-			continue
-		}
-
-		if err != nil {
+		var exists bool
+		if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM roles WHERE organization_id = ? AND LOWER(name) = LOWER(?) AND deleted_at IS NULL)`,
+			orgID, dr.Name).Scan(&exists); err != nil {
 			return err
 		}
-
-		currentPermissions := jsonList(storedPermissions)
-		mergedPermissions := mergeDefaultPermissions(
-			currentPermissions,
-			dr.Permissions,
-		)
-
-		if len(mergedPermissions) == len(currentPermissions) {
+		if exists {
 			continue
 		}
-
-		if _, err := tx.Exec(
-			`UPDATE roles SET permissions = ?
-			 WHERE organization_id = ? AND id = ?`,
-			toJSON(mergedPermissions),
-			orgID,
-			roleID,
-		); err != nil {
+		if _, err := tx.Exec(`INSERT INTO roles (organization_id, name, permissions, active) VALUES (?,?,?,1)`,
+			orgID, dr.Name, toJSON(dr.Permissions)); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
+// addedDefaultPermissions — permisos que se sumaron a los roles por defecto
+// después de que ya existían organizaciones (KAN-110). Cada entrada se aplica
+// una sola vez a los roles existentes; el marcador queda en app_migrations.
+var addedDefaultPermissions = []struct {
+	Marker string
+	Roles  map[string][]string
+}{
+	{"kan-110-permisos-lectura", map[string][]string{
+		"Gerente": {ViewRoles},
+		"Técnico": {ViewCatalogs, ViewSuppliers},
+		"Cajero":  {ViewCatalogs, ViewSuppliers},
+	}},
+}
+
+// backfillDefaultPermissions agrega a los roles por defecto que ya existen los
+// permisos de addedDefaultPermissions que les falten, una sola vez por marcador.
+// Conserva los permisos actuales del rol y no duplica.
+func backfillDefaultPermissions() error {
+	for _, add := range addedDefaultPermissions {
+		err := withTx(func(tx *sql.Tx) error {
+			var done bool
+			if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM app_migrations WHERE name = ?)`, add.Marker).Scan(&done); err != nil {
+				return err
+			}
+			if done {
+				return nil
+			}
+			for name, perms := range add.Roles {
+				rows, err := tx.Query(`SELECT id, permissions FROM roles WHERE LOWER(name) = LOWER(?) AND deleted_at IS NULL`, name)
+				if err != nil {
+					return err
+				}
+				type roleRow struct {
+					id    string
+					perms []string
+				}
+				found := []roleRow{}
+				for rows.Next() {
+					var id string
+					var stored sql.NullString
+					if err := rows.Scan(&id, &stored); err != nil {
+						rows.Close()
+						return err
+					}
+					found = append(found, roleRow{id, jsonList(stored)})
+				}
+				rows.Close()
+				if err := rows.Err(); err != nil {
+					return err
+				}
+				for _, r := range found {
+					merged := mergeDefaultPermissions(r.perms, perms)
+					if len(merged) == len(r.perms) {
+						continue
+					}
+					if _, err := tx.Exec(`UPDATE roles SET permissions = ? WHERE id = ?`, toJSON(merged), r.id); err != nil {
+						return err
+					}
+				}
+			}
+			_, err := tx.Exec(`INSERT INTO app_migrations (name) VALUES (?)`, add.Marker)
+			return err
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// mergeDefaultPermissions agrega a current los permisos de defaults que le falten.
 func mergeDefaultPermissions(
 	current []string,
 	defaults []string,
@@ -291,6 +323,9 @@ func EnsureDefaultRoles() {
 		if err := withTx(func(tx *sql.Tx) error { return registerDefaultRoles(tx, id) }); err != nil {
 			log.Printf("Roles por defecto (organización %s): %v", id, err)
 		}
+	}
+	if err := backfillDefaultPermissions(); err != nil {
+		log.Printf("Permisos nuevos de roles por defecto: %v", err)
 	}
 }
 
