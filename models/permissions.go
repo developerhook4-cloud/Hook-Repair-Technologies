@@ -120,6 +120,7 @@ var DefaultRoles = []defaultRole{
 	}},
 	{"Gerente", []string{
 		ViewUsers,
+		ViewRoles,
 		ViewPos, UpdatePos, DeletePos,
 		ViewRepairs, UpdateRepairs, DeleteRepairs,
 		ViewInventory, UpdateInventory, DeleteInventory,
@@ -137,12 +138,16 @@ var DefaultRoles = []defaultRole{
 		ViewDevices, UpdateDevices,
 		ViewServices, UpdateServices,
 		ViewCustomers,
+		ViewCatalogs,
+		ViewSuppliers,
 	}},
 	{"Cajero", []string{
 		ViewPos, UpdatePos,
 		ViewRepairs, UpdateRepairs,
 		ViewInventory, UpdateInventory,
 		ViewCustomers, UpdateCustomers,
+		ViewCatalogs,
+		ViewSuppliers,
 	}},
 }
 
